@@ -235,8 +235,7 @@
   --sidebar: hsla(0, 0%, 0%, 0);
 }
 
-/* Windows and Linux desktop: the native caption buttons are overlaid on the
-   top-right corner, so anything anchored there steps left by their width. */
+/* Windows and Linux desktop: keep clear of the overlaid caption buttons. */
 :is([data-platform="win32"], [data-platform="linux"]):not([data-fullscreen="true"]) .titlebar-safe {
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
 }

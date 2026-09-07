@@ -8,12 +8,8 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { SkillsInstallResult } from "./main-channels";
 
-// Junctions need no privilege on Windows, where a plain directory symlink
-// requires Developer Mode or elevation; lstat/readlink still report them as
-// symbolic links, so the rest of this file treats both alike.
+// Junctions need no Developer Mode on Windows and still read as symlinks.
 const LINK_TYPE = process.platform === "win32" ? "junction" : undefined;
-// A link into any staged skills directory is ours: `resources/skills` in the
-// packaged app on every platform, `apps/desktop/skills` in development.
 const STAGED_SKILLS = /[\\/](resources|desktop)[\\/]skills[\\/]/;
 
 const AGENT_SKILLS_DIRS = [

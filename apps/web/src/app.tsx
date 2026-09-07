@@ -43,9 +43,6 @@ function AuthGate(props: { children: JSX.Element }) {
   );
 }
 
-// A borderless window can only be dragged by regions that opt in. One strip
-// along the top serves every route, so the sign-in and onboarding screens can
-// be moved too, not just the dashboard and editor, which add their own.
 function WindowDragStrip() {
   const isFullscreen = useFullscreenState();
   return (

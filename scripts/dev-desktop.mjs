@@ -24,11 +24,7 @@ const DEV_URL = `http://localhost:${DEV_PORT}`;
 const children = [];
 let shuttingDown = false;
 
-// Tools are started from their JS entry points rather than the `.bin` shims:
-// on Windows those shims are `.cmd` files, which Node refuses to spawn without
-// a shell, and a shell would hide the real PID from teardown. Off Windows the
-// child gets its own process group so we can signal the tool *and* its
-// children (esbuild, electron) in one shot.
+// JS entry points, not .bin shims: those are .cmd files on Windows.
 function run(name, script, args, cwd) {
   const child = spawn(process.execPath, [script, ...args], { cwd, stdio: "inherit", detached: !WINDOWS });
   child.on("exit", (code) => {
@@ -58,9 +54,6 @@ function shutdown(code) {
   process.exit(code);
 }
 
-// Runs a workspace's build through whichever package manager launched this
-// script, so `npm run dev` and `bun run dev` both work; a bare `node
-// scripts/dev-desktop.mjs` falls back to npm.
 function buildWorkspace(pkg) {
   const pm = process.env.npm_execpath;
   if (pm?.endsWith(".js")) {

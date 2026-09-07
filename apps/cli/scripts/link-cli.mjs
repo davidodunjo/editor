@@ -2,10 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Puts a `dapi` on PATH that runs the development build in dist/, the
-// counterpart of the packaged app's installer. macOS and Linux symlink it into
-// Homebrew's bin as before; Windows gets a .cmd shim in the per-user
-// WindowsApps folder, which is on PATH by default. `--remove` undoes either.
+// Development counterpart of the in-app CLI installer.
 
 import { existsSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
