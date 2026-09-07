@@ -5,7 +5,7 @@
 import { getAssetSpec, isAssetRef, parseSource } from "@diffusionstudio/jsx";
 import {
   Ai, AssetId, Audio, GenAi, getAssetFile, getEntityTree, Hidden, Muted,
-  Paint, PaintType, Project, Source,
+  Paint, PaintType, Source,
 } from "@diffusionstudio/runtime";
 import type { SourceModifierValues } from "@diffusionstudio/runtime";
 import { createEncoder } from "@diffusionstudio/encoder";
@@ -19,13 +19,11 @@ import {
   PROMPT_INPUT_VOICE_OPTIONS,
 } from "@/components/genai/config";
 import { assert, mimeTypeToExtension } from "@/utils";
-import { uploadBlob } from "@/lib/uploads";
-import { trpc } from "@/lib/trpc";
+import { registry } from "@/providers";
 import { toast } from "somoto";
 
 import type { AspectRatio, AssetInput, AssetRef, AssetSpecInput } from "@diffusionstudio/jsx";
-import type { Asset, AssetLibrary, AssetType } from "@diffusionstudio/assets";
-import type { FileRef } from "@diffusionstudio/api-contract";
+import type { Asset, AssetGeneration, AssetLibrary, AssetType } from "@diffusionstudio/assets";
 import type { ExportResult } from "@diffusionstudio/encoder";
 import type { Entity, World } from "koota";
 
@@ -73,17 +71,17 @@ export type ResolvedSpec =
   | { type: "voice"; model: string; prompt: string; voice: string; seed?: number }
   | { type: "audio"; model: string; prompt: string; duration?: number; seed?: number };
 
+const GENERATED_NAME_LENGTH = 48;
+
 /** Creates the project's GenAi over `library` and attaches it as the world's Ai. */
 export function attachAi(world: World, library: AssetLibrary, dir?: string): EditorGenAi {
-  const ai = new EditorGenAi(library, world.get(Project)?.id ?? "project", dir);
+  const ai = new EditorGenAi(library, dir);
   world.set(Ai, ai);
   return ai;
 }
 
 export class EditorGenAi extends GenAi {
   private readonly library: AssetLibrary;
-  /** Prefixes upload keys, so referenced assets land project-unique in the bucket. */
-  private readonly projectId: string;
   /** The project's folder, so a transcription's capture compiles the sources as they are now. */
   private readonly dir?: string;
 
@@ -97,10 +95,9 @@ export class EditorGenAi extends GenAi {
   /** In-flight generations and transcriptions keyed by `generationKey`. */
   private readonly inflight = new Map<string, Promise<Asset>>();
 
-  public constructor(library: AssetLibrary, projectId: string, dir?: string) {
+  public constructor(library: AssetLibrary, dir?: string) {
     super();
     this.library = library;
-    this.projectId = projectId;
     this.dir = dir;
   }
 
@@ -164,14 +161,9 @@ export class EditorGenAi extends GenAi {
     }
     assert(result.type === "success" && result.data !== undefined, "Failed to encode the scene audio");
 
-    const uploadId = crypto.randomUUID();
-    const audioFile = new File([result.data], `${uploadId}.ogg`, { type: "audio/ogg" });
-    console.log(`[gen-ai] uploading scene audio for ${key} (${audioFile.size} bytes)`);
-    const fileRef = await uploadBlob(audioFile, uploadId);
-    assert(fileRef, "Failed to upload the scene audio for transcription");
-
-    console.log(`[gen-ai] transcribing scene audio for ${key}`);
-    const { results: transcript } = await trpc.transcribe.mutate({ audio: fileRef });
+    const audio = new File([result.data], "scene-audio.ogg", { type: "audio/ogg" });
+    console.log(`[gen-ai] transcribing scene audio for ${key} (${audio.size} bytes)`);
+    const transcript = await registry.run("transcription", { audio });
     assert(
       transcript.length > 0 && transcript.some((segment) => segment.words.length > 0),
       "No speech detected. The audio does not appear to contain recognizable speech.",
@@ -289,10 +281,53 @@ export class EditorGenAi extends GenAi {
   /** Runs a generation and stores its first result under `generated/`. */
   private async runGeneration(spec: ResolvedSpec, generationKey: string): Promise<Asset> {
     console.log(`[gen-ai] generating ${spec.type} with ${spec.model}:`, spec);
-    const { name, results, generationId } = await this.requestGeneration(spec);
+    const results = await this.requestGeneration(spec);
     assert(results.length > 0, "No results returned from the model");
 
-    return this.store(results[0].url, name, { key: generationKey, id: generationId });
+    return this.store(results[0], generatedName(spec), { key: generationKey });
+  }
+
+  private async requestGeneration(spec: ResolvedSpec): Promise<File[]> {
+    switch (spec.type) {
+      case "image":
+        return registry.run("image", {
+          model: spec.model,
+          prompt: spec.prompt,
+          aspectRatio: spec.aspectRatio,
+          seed: spec.seed,
+          images: await Promise.all(spec.refIds.map((id) => this.fileOf(id))),
+        });
+      case "video": {
+        const [startFrame, endFrame] = await Promise.all([
+          spec.startFrameId ? this.fileOf(spec.startFrameId) : undefined,
+          spec.endFrameId ? this.fileOf(spec.endFrameId) : undefined,
+        ]);
+        return registry.run("video", {
+          model: spec.model,
+          prompt: spec.prompt,
+          aspectRatio: spec.aspectRatio,
+          duration: spec.duration,
+          generateAudio: spec.audio,
+          seed: spec.seed,
+          startFrame,
+          endFrame,
+        });
+      }
+      case "voice":
+        return registry.run("speech", {
+          model: spec.model,
+          voice: spec.voice,
+          text: spec.prompt,
+          seed: spec.seed,
+        });
+      case "audio":
+        return registry.run("sound", {
+          model: spec.model,
+          prompt: spec.prompt,
+          duration: spec.duration,
+          seed: spec.seed,
+        });
+    }
   }
 
   /**
@@ -316,9 +351,9 @@ export class EditorGenAi extends GenAi {
    * next: upscaling a picture twice costs what upscaling it once did.
    */
   public async transform(kind: TransformKind, asset: Asset): Promise<Asset> {
-    // No upscale factor in the key: the endpoint takes none, so every factor
-    // is the same call and would otherwise be billed once per number asked
-    // for. It belongs here the moment the API can be told one.
+    // No upscale factor in the key: the capability takes none, so every
+    // factor is the same call and would otherwise be billed once per number
+    // asked for. It belongs here the moment a provider can be told one.
     const key = `transform:v1:${kind}:${asset.id}`;
 
     const cached = this.library.list().find((entry) => entry.generation?.key === key);
@@ -338,111 +373,44 @@ export class EditorGenAi extends GenAi {
     }
   }
 
-  /** Uploads the input, runs the call, and stores the result beside the generations. */
   private async runTransform(kind: TransformKind, asset: Asset, key: string): Promise<Asset> {
     console.log(`[gen-ai] running ${kind} on ${asset.path}`);
-    const input = await this.uploadInput(asset.id);
-    const { url, generationId } = await this.requestTransform(kind, asset, input);
+    const result = await this.requestTransform(kind, asset, await this.fileOf(asset.id));
 
     const base = assetName(asset).replace(/\.[^.]+$/, "");
-    return this.store(url, `${base} (${TRANSFORMS[kind].suffix})`, { key, id: generationId });
+    return this.store(result, `${base} (${TRANSFORMS[kind].suffix})`, { key });
   }
 
-  private requestTransform(kind: TransformKind, asset: Asset, input: FileRef) {
+  private requestTransform(kind: TransformKind, asset: Asset, input: File): Promise<File> {
     switch (kind) {
       case "remove-background":
         assert(asset.type === "IMAGE", "Only a picture has a background to remove");
-        return trpc.removeBackground.mutate({ image: input });
+        return registry.run("background", { image: input });
       case "upscale":
-        return isMoving(asset.type)
-          ? trpc.upscaleVideo.mutate({ video: input })
-          : trpc.upscaleImage.mutate({ image: input });
+        return registry.run("upscale", { media: input });
       case "add-audio":
         assert(isMoving(asset.type), "Only footage can be scored");
-        return trpc.addAudioToVideo.mutate({ video: input });
+        throw new Error("No provider can add audio to footage yet.");
     }
   }
 
   /**
-   * Downloads what a model returned and files it in the library. The name is
-   * the model's, the extension the result's — what came back decides what the
-   * file is called, not what was asked for.
+   * Files what a model returned in the library. The name is ours, the
+   * extension the result's — what came back decides what the file is called,
+   * not what was asked for.
    */
-  private async store(url: string, name: string, generation: { key: string; id?: string | null }): Promise<Asset> {
-    const response = await fetch(url);
-    assert(response.ok, `Failed to fetch the generated asset: ${response.status}`);
-    const blob = await response.blob();
-
-    return this.library.store(blob, {
-      name: name + resultExtension(url, blob),
+  private store(file: File, name: string, generation: AssetGeneration): Promise<Asset> {
+    return this.library.store(file, {
+      name: name + resultExtension(file),
       folder: GENERATED_DIR,
       generation,
     });
   }
 
-  private requestGeneration(spec: ResolvedSpec) {
-    switch (spec.type) {
-      case "image": {
-        return (async () => {
-          const images = spec.refIds.length > 0
-            ? await Promise.all(spec.refIds.map((id) => this.uploadInput(id)))
-            : undefined;
-
-          return await trpc.generateImage.mutate({
-            model: spec.model,
-            prompt: spec.prompt,
-            aspectRatio: spec.aspectRatio,
-            count: 1,
-            seed: spec.seed,
-            images,
-          });
-        })();
-      }
-      case "video": {
-        return (async () => {
-          const [startFrame, endFrame] = await Promise.all([
-            spec.startFrameId ? this.uploadInput(spec.startFrameId) : undefined,
-            spec.endFrameId ? this.uploadInput(spec.endFrameId) : undefined,
-          ]);
-
-          return await trpc.generateVideo.mutate({
-            model: spec.model,
-            prompt: spec.prompt,
-            aspectRatio: spec.aspectRatio,
-            duration: spec.duration,
-            generateAudio: spec.audio,
-            seed: spec.seed,
-            startFrame,
-            endFrame,
-          });
-        })();
-      }
-      case "voice": {
-        return trpc.textToSpeech.mutate({
-          model: spec.model,
-          prompt: spec.prompt,
-          voice: spec.voice,
-          seed: spec.seed,
-        });
-      }
-      case "audio": {
-        return trpc.generateSound.mutate({
-          model: spec.model,
-          prompt: spec.prompt,
-          duration: spec.duration,
-          seed: spec.seed,
-        });
-      }
-    }
-  }
-
-  /** Uploads a referenced asset for the model to read; the bucket key is project-unique. */
-  private async uploadInput(assetId: string) {
+  private fileOf(assetId: string): Promise<File> {
     const asset = this.library.get(assetId);
     assert(asset, `Referenced asset ${assetId} not found`);
-    const uploaded = await uploadBlob(await getAssetFile(asset), `${this.projectId}-${assetId}`);
-    assert(uploaded, `Failed to upload referenced asset ${assetId}`);
-    return uploaded;
+    return getAssetFile(asset);
   }
 }
 
@@ -459,22 +427,26 @@ export function generationSpecOf(asset: Asset): ResolvedSpec | undefined {
 /** Whether an asset type is footage, for the calls that only take footage. */
 const isMoving = (type: AssetType): boolean => type === "VIDEO" || type === "SEQUENCE";
 
+function generatedName(spec: ResolvedSpec): string {
+  const name = spec.prompt.replace(/[<>:"/\\|?*\p{Cc}]/gu, " ").replace(/\s+/g, " ").trim();
+  return name.slice(0, GENERATED_NAME_LENGTH).trim() || spec.type;
+}
+
 /**
  * What to call a generated result: the extension its type implies, falling
- * back to the one its URL carries. Neither is guaranteed — some models hand
- * back a plain slug (`.../files/young-man-city-skyline`), some servers say
- * only `application/octet-stream` — so this can come back empty, and the
- * library reads the bytes instead. The name is what the file is identified
- * by once on disk, so getting it right saves that guess.
+ * back to the one its own name carries. Neither is guaranteed — some models
+ * hand back a plain slug, some say only `application/octet-stream` — so this
+ * can come back empty, and the library reads the bytes instead. The name is
+ * what the file is identified by once on disk, so getting it right saves
+ * that guess.
  */
-function resultExtension(url: string, blob: Blob): string {
-  const fromType = blob.type ? mimeTypeToExtension(blob.type) : ".bin";
+function resultExtension(file: File): string {
+  const fromType = file.type ? mimeTypeToExtension(file.type) : ".bin";
   if (fromType !== ".bin") return fromType;
 
-  const fileName = url.split(/[?#]/)[0]!.split("/").pop() ?? "";
-  const dot = fileName.lastIndexOf(".");
-  const fromUrl = dot > 0 ? fileName.slice(dot + 1) : "";
-  return fromUrl && fromUrl.length <= 5 ? `.${fromUrl}` : "";
+  const dot = file.name.lastIndexOf(".");
+  const fromName = dot > 0 ? file.name.slice(dot + 1) : "";
+  return fromName && fromName.length <= 5 ? `.${fromName}` : "";
 }
 
 /**
@@ -523,7 +495,7 @@ function sceneHasAudio(world: World, scene: Entity): boolean {
 }
 
 /**
- *  Per-model constraints (`dapi models video`); unknown models are left to the server.
+ *  Per-model constraints (`dapi models video`); unknown models are left to the provider.
  */
 function checkVideoConstraints(spec: Extract<ResolvedSpec, { type: "video" }>): void {
   const model = PROMPT_INPUT_VIDEO_MODEL_OPTIONS.find((option) => option.id === spec.model);

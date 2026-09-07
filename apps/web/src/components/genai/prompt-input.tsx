@@ -23,10 +23,12 @@ import {
   Match,
   Switch,
   createMemo,
+  createResource,
   createSignal,
   onCleanup,
   type Accessor,
 } from "solid-js";
+import { registry } from "@/providers";
 
 import {
   PROMPT_INPUT_IMAGE_MODEL_OPTIONS,
@@ -65,12 +67,26 @@ import { useMediaSelection } from "./selection";
 import { ASSET_DRAG_TYPE } from "@/components/sidebar-left/folder-item";
 
 import type { AssetCache } from "@diffusionstudio/assets";
+import type { Capability } from "@diffusionstudio/providers";
 import type { ThumbnailAsset } from "@/components/ui/asset-thumbnail";
 
 export type PromptInputMode = "IMAGE" | "VIDEO" | "VOICE" | "AUDIO";
 
 const DEFAULT_BUTTON_CLASS = "text-muted-foreground gap-0 pr-2 pl-0";
 const MAX_IMAGE_REFERENCES = 5;
+const UNAVAILABLE_DESCRIPTION = "No configured provider";
+
+const MODE_CAPABILITY: Record<PromptInputMode, Capability> = {
+  IMAGE: "image",
+  VIDEO: "video",
+  VOICE: "speech",
+  AUDIO: "sound",
+};
+
+async function availableIds(mode: PromptInputMode): Promise<Set<string>> {
+  const listed = mode === "VOICE" ? await registry.voices() : await registry.models(MODE_CAPABILITY[mode]);
+  return new Set(listed.filter((entry) => entry.available).map((entry) => entry.id));
+}
 
 type GenerationConfgs = {
   IMAGE: ImageGenerationConfig;
@@ -142,6 +158,9 @@ export function PromptInput(props: PromptInputProps) {
 
   const mode = () => config().mode;
   const prompt = () => config().prompt;
+
+  const [available] = createResource(mode, availableIds);
+  const isAvailable = (id: string) => available()?.has(id) ?? true;
 
   // These are only read inside their matching <Match when={mode() === …}>
   // blocks, so the narrowing is sound.
@@ -635,6 +654,7 @@ export function PromptInput(props: PromptInputProps) {
                     searchPlaceholder="Search in image models"
                     options={PROMPT_INPUT_IMAGE_MODEL_OPTIONS}
                     value={modelAccessor}
+                    isAvailable={isAvailable}
                     onChange={(v) => patch({ model: v })}
                   />
                   <PromptInputCompactMenu
@@ -661,6 +681,7 @@ export function PromptInput(props: PromptInputProps) {
                     searchPlaceholder="Search in video models"
                     options={PROMPT_INPUT_VIDEO_MODEL_OPTIONS}
                     value={modelAccessor}
+                    isAvailable={isAvailable}
                     onChange={handleVideoModelChange}
                   />
                   <PromptInputCompactMenu
@@ -706,6 +727,7 @@ export function PromptInput(props: PromptInputProps) {
                 <VoiceMenu
                   options={PROMPT_INPUT_VOICE_OPTIONS}
                   value={voiceAccessor}
+                  isAvailable={isAvailable}
                   onChange={(v) => patch({ voice: v })}
                 />
               </Match>
@@ -714,6 +736,7 @@ export function PromptInput(props: PromptInputProps) {
                   searchPlaceholder="Search in audio models"
                   options={PROMPT_INPUT_AUDIO_MODEL_OPTIONS}
                   value={modelAccessor}
+                  isAvailable={isAvailable}
                   onChange={(v) => patch({ model: v })}
                 />
               </Match>
@@ -827,6 +850,7 @@ type ModelMenuProps = {
   searchPlaceholder: string;
   options: { id: string; name: string; description: string; icon: string }[];
   value: Accessor<string>;
+  isAvailable(id: string): boolean;
   onChange(value: string): void;
 }
 
@@ -880,6 +904,7 @@ function ModelMenu(props: ModelMenuProps) {
             <For each={filteredOptions()}>
               {(option) => {
                 const selected = props.value() === option.id;
+                const available = () => props.isAvailable(option.id);
 
                 return (
                   <DropdownMenuItem
@@ -888,6 +913,7 @@ function ModelMenu(props: ModelMenuProps) {
                     onSelect={() => props.onChange(option.id)}
                     classList={{
                       "data-highlighted:bg-muted": selected,
+                      "opacity-50": !available(),
                     }}
                   >
                     <div class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-sm" >
@@ -895,7 +921,7 @@ function ModelMenu(props: ModelMenuProps) {
                     </div>
                     <div class="min-w-0 flex-1 text-muted-foreground">
                       <div class="truncate font-450 group-hover:text-foreground" classList={{ "text-foreground": selected }}>{option.name}</div>
-                      <div class="truncate">{option.description}</div>
+                      <div class="truncate">{available() ? option.description : UNAVAILABLE_DESCRIPTION}</div>
                     </div>
                     <span class="grid size-7 place-items-center">
                       <Show when={selected}>
@@ -917,6 +943,7 @@ function ModelMenu(props: ModelMenuProps) {
 type VoiceMenuProps = {
   options: { value: string; label: string; thumbnail: string; description: string; previewUrl: string }[];
   value: Accessor<string>;
+  isAvailable(id: string): boolean;
   onChange(value: string): void;
 }
 
@@ -1004,12 +1031,13 @@ function VoiceMenu(props: VoiceMenuProps) {
               {(option) => {
                 const selected = () => props.value() === option.value;
                 const isPlaying = () => playingVoice() === option.value;
+                const available = () => props.isAvailable(option.value);
 
                 return (
                   <button
                     type="button"
                     class="flex items-center gap-2 rounded-md px-1 py-1 h-[42px] w-full text-left group hover:bg-accent transition-colors"
-                    classList={{ "bg-muted": selected() }}
+                    classList={{ "bg-muted": selected(), "opacity-50": !available() }}
                     onClick={() => selectVoice(option.value)}
                   >
                     <div
@@ -1037,7 +1065,7 @@ function VoiceMenu(props: VoiceMenuProps) {
                       >
                         {option.label}
                       </div>
-                      <div class="truncate text-base">{option.description}</div>
+                      <div class="truncate text-base">{available() ? option.description : UNAVAILABLE_DESCRIPTION}</div>
                     </div>
                     <span class="grid size-7 place-items-center shrink-0">
                       <Show when={selected()}>

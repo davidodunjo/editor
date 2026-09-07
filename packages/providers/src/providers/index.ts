@@ -2,10 +2,4 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { registry } from "@/providers";
-
-import type { VoiceInfo } from "@diffusionstudio/cli/channels";
-
-export function handleVoices() {
-  return (): Promise<VoiceInfo[]> => registry.voices();
-}
+export { gemini } from "./gemini";

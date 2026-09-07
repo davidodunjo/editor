@@ -27,12 +27,6 @@ cd editor
 npm install
 ```
 
-Create the client env file. The app does not start without it:
-
-```powershell
-Copy-Item apps/web/.env.example apps/web/.env
-```
-
 ## Development
 
 Run the desktop app from source. This builds the CLI, starts the web dev server, then launches Electron:
@@ -104,7 +98,7 @@ npm run make --workspace=@diffusionstudio/desktop
 
 ## Status
 
-Windows support is complete: development, packaging and the CLI. Sign-in, billing and telemetry are removed; the app runs offline with no account. Cloud features still call the upstream backend and fail without it: generation, transcription, `dapi media listen`, upscaling and background removal. Replacing them with user-supplied API keys and local models is the next piece of work.
+Windows support is complete: development, packaging and the CLI. Sign-in, billing and telemetry are removed; the app runs offline with no account and needs no env file. Generation, transcription, `dapi media listen`, upscaling and background removal run through providers you configure with your own API keys, in Settings > AI providers or as environment variables (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FAL_KEY`, `REPLICATE_API_TOKEN`, `ELEVENLABS_API_KEY`), which take precedence. `dapi models` and `dapi voices` show which models are available. Gemini is the provider for `dapi media listen`. Local transcription (Whisper) and local speech (Piper) are next.
 
 ## License
 

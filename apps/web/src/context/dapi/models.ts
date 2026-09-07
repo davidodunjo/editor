@@ -2,43 +2,30 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import {
-  PROMPT_INPUT_IMAGE_MODEL_OPTIONS,
-  PROMPT_INPUT_VIDEO_MODEL_OPTIONS,
-  PROMPT_INPUT_AUDIO_MODEL_OPTIONS,
-} from "@/components/genai/config";
+import { registry } from "@/providers";
+
 import type { ModelsRequest, ModelInfo } from "@diffusionstudio/cli/channels";
+import type { Capability } from "@diffusionstudio/providers";
+
+type ModelType = NonNullable<ModelsRequest["type"]>;
+
+const CAPABILITIES: Record<ModelType, Capability> = { image: "image", video: "video", audio: "sound" };
 
 export function handleModels() {
-  return async (req: ModelsRequest) => {
+  return async (req: ModelsRequest): Promise<ModelInfo[]> => {
+    const types = req.type ? [req.type] : (Object.keys(CAPABILITIES) as ModelType[]);
     const out: ModelInfo[] = [];
-    if (!req.type || req.type === "image") {
-      for (const option of PROMPT_INPUT_IMAGE_MODEL_OPTIONS) {
+    for (const type of types) {
+      for (const model of await registry.models(CAPABILITIES[type])) {
         out.push({
-          type: "image",
-          id: option.id,
-          name: option.name,
-        });
-      }
-    }
-    if (!req.type || req.type === "video") {
-      for (const option of PROMPT_INPUT_VIDEO_MODEL_OPTIONS) {
-        out.push({
-          type: "video",
-          id: option.id,
-          name: option.name,
-          durations: option.durations,
-          aspectRatios: option.aspectRatios,
-          features: option.features,
-        });
-      }
-    }
-    if (!req.type || req.type === "audio") {
-      for (const option of PROMPT_INPUT_AUDIO_MODEL_OPTIONS) {
-        out.push({
-          type: "audio",
-          id: option.id,
-          name: option.name,
+          type,
+          id: model.id,
+          name: model.name,
+          provider: model.provider,
+          available: model.available,
+          durations: model.durations?.map((seconds) => `${seconds}s`),
+          aspectRatios: model.aspectRatios,
+          features: model.features,
         });
       }
     }

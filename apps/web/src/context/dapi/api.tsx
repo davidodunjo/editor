@@ -109,7 +109,7 @@ function createAppRouter(navigate: Navigator) {
       transcribe: q(handleMediaTranscribe(resolveAsset)),
       filmstrip: q(handleMediaFilmstrip(resolveAsset)),
       waveform: q(handleMediaWaveform(resolveAsset)),
-      listen: q(handleMediaListen(resolveAsset, editorSession)),
+      listen: q(handleMediaListen(resolveAsset)),
     }),
   });
 }

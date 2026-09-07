@@ -1,0 +1,22 @@
+{
+  "name": "@diffusionstudio/providers",
+  "version": "0.1.0",
+  "description": "Capability contracts and the registry that routes generation, transcription and analysis to user-configured providers.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./providers": "./src/providers/index.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@diffusionstudio/assets": "*",
+    "@diffusionstudio/jsx": "*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

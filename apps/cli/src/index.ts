@@ -746,14 +746,16 @@ media
 program
   .command("models")
   .description(
-    `List available AI generation models and their per-model constraints (durations, aspect ratios, features), for \`generate.*\` asset declarations in a project module.`,
+    `List the AI generation models offered by the providers and their per-model constraints (durations, aspect ratios, features), for \`generate.*\` asset declarations in a project module. Each line carries the model's \`provider\` and whether it is \`available\`, which reflects the providers configured in Settings > AI providers or via environment variables.`,
   )
   .argument("[type]", `filter to one of "image", "video", "audio" (default: all three)`)
   .action((type: string | undefined) => listModels(type));
 
 program
   .command("voices")
-  .description(`List the speech voices available for \`generate.voice\` declarations in a project module.`)
+  .description(
+    `List the speech voices offered by the providers, for \`generate.voice\` declarations in a project module. Each line carries the voice's \`provider\` and whether it is \`available\`, which reflects the providers configured in Settings > AI providers or via environment variables.`,
+  )
   .action(() => listVoices());
 
 program

@@ -14,6 +14,7 @@ import { healSkillsLinks, installSkills, isSkillsInstalled } from "./skills-inst
 import { setupAppMenu } from "./menu";
 import { mainBridge } from "./main-manager";
 import { MAIN_CHANNELS } from "./main-channels";
+import { getSecret, readVendorEnvironment, setSecret } from "./secrets";
 import {
   compileProject,
   createProject,
@@ -219,6 +220,9 @@ if (app.requestSingleInstanceLock()) {
   });
   mainBridge.handle(MAIN_CHANNELS.HEADLESS_GET_MODE, () => isHeadless());
   mainBridge.handle(MAIN_CHANNELS.LOGS_GET, () => logBuffer);
+  mainBridge.handle(MAIN_CHANNELS.SECRETS_GET, ({ name }) => getSecret(name));
+  mainBridge.handle(MAIN_CHANNELS.SECRETS_SET, ({ name, value }) => setSecret(name, value));
+  mainBridge.handle(MAIN_CHANNELS.ENV_GET, ({ names }) => readVendorEnvironment(names));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_PICK_ROOT, () => pickRoot(mainWindow));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_DEFAULT_ROOT, () => defaultRoot(mainWindow));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_LIST, ({ root }) => listProjects(root));

@@ -177,12 +177,14 @@ export type ModelInfo = {
   type: "image" | "video" | "audio";
   id: string;
   name: string;
+  provider: string;
+  available: boolean;
   durations?: string[];
   aspectRatios?: string[];
   features?: Array<"start-frame" | "end-frame" | "audio">;
 };
 
-export type VoiceInfo = { id: string; label: string; description: string };
+export type VoiceInfo = { id: string; label: string; description: string; provider: string; available: boolean };
 
 export type ScreenshotResult = { base64: string; width: number; height: number };
 

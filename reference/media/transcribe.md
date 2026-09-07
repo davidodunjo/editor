@@ -2,7 +2,7 @@
 
 Transcribes the speech in a video or audio asset and returns the timed transcript. Word-level start/end times are in **seconds** (source/content time).
 
-Transcription runs through a configured cloud backend; without one the command exits non-zero. It is moving to user-supplied API keys and local models.
+Transcription runs through a configured provider (see [AI providers](../README.md#ai-providers)); without one the command exits non-zero. Local transcription (Whisper) is next.
 
 ## Input
 

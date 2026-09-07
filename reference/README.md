@@ -18,7 +18,22 @@ How the surface is divided:
 
 - AI asset generation (image / video / speech / audio) is declared in the project module (`generate.*`, see [jsx/generate.md](./jsx/generate.md)). `models` and `voices` list what those declarations can reference.
 - Inspecting an existing asset (probe / transcribe / listen / filmstrip / waveform / grab) lives under `media`.
-- Everything runs locally and needs no account, except what calls an AI model: `generate.*` declarations, `media transcribe`, `media listen`, and `<captions>` transcription. These currently require a configured cloud backend and fail without one; they are moving to user-supplied API keys and local models.
+- Everything runs locally and needs no account, except what calls an AI model: `generate.*` declarations, `media transcribe`, `media listen`, and `<captions>` transcription. These run through providers the user configures; see [AI providers](#ai-providers).
+
+## AI providers
+
+Generation, transcription, `media listen`, upscaling and background removal call a provider the user has configured with an API key. Keys are set in the app under Settings > AI providers, or as environment variables, which take precedence over stored keys:
+
+| Vendor | Variable |
+| ------ | -------- |
+| Gemini | `GEMINI_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| fal | `FAL_KEY` |
+| Replicate | `REPLICATE_API_TOKEN` |
+| ElevenLabs | `ELEVENLABS_API_KEY` |
+
+[`dapi models`](./models.md) and [`dapi voices`](./voices.md) list every model and voice with its `provider` and whether it is `available`, so an agent can tell what will work before declaring it. A request whose model has no configured provider fails with `No configured provider offers the model "<id>". Add its API key in Settings.` Local transcription (Whisper) and local speech (Piper) are next.
 
 ## Commands
 

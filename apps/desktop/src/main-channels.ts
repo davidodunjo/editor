@@ -41,6 +41,9 @@ export const MAIN_CHANNELS = {
   FILE_WRITE_CLOSE: "file:write-close",
   FILE_WRITE_ABORT: "file:write-abort",
   HEADLESS_GET_MODE: "headless:get-mode",
+  SECRETS_GET: "secrets:get",
+  SECRETS_SET: "secrets:set",
+  ENV_GET: "env:get",
   LOGS_GET: "logs:get",
   PROJECTS_PICK_ROOT: "projects:pick-root",
   PROJECTS_DEFAULT_ROOT: "projects:default-root",
@@ -177,6 +180,9 @@ export type MainRequestMap = {
   [MAIN_CHANNELS.PROJECTS_WATCH]: { request: { dir: string }; response: void };
   [MAIN_CHANNELS.PROJECTS_UNWATCH]: { request: { dir: string }; response: void };
   // The asset manifest (`assets.yml`) as plain data; null when there is none.
+  [MAIN_CHANNELS.SECRETS_GET]: { request: { name: string }; response: string | null };
+  [MAIN_CHANNELS.SECRETS_SET]: { request: { name: string; value: string | null }; response: void };
+  [MAIN_CHANNELS.ENV_GET]: { request: { names: string[] }; response: Record<string, string | null> };
   [MAIN_CHANNELS.PROJECTS_MANIFEST_READ]: { request: { dir: string }; response: unknown };
   [MAIN_CHANNELS.PROJECTS_MANIFEST_WRITE]: { request: { dir: string; manifest: unknown }; response: void };
   // The project's config: the `diffusion` field of its package.json, as

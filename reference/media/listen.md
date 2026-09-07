@@ -2,7 +2,7 @@
 
 Puts a multimodal model in front of an audio track and returns its answer. With no prompt it returns a general description of what is heard; with `--prompt` it answers that question about the audio (e.g. "who is speaking?", "what music is playing?", "summarize what is said"). Accepts an audio file or a video, but only the audio track is analyzed by default. Alias: `watch`.
 
-The model runs through a configured cloud backend; without one the command exits non-zero. It is moving to user-supplied API keys and local models.
+The model runs through a configured provider (see [AI providers](../README.md#ai-providers)); Gemini is the recommended one, and the only provider offering `listen` today. Without a configured provider the command exits non-zero.
 
 ## Input
 

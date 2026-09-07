@@ -2,10 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-    // providers imports the browser-only assets package, so its DOM settings apply here too.
     "erasableSyntaxOnly": false,
-    "lib": ["es2024", "DOM", "DOM.Iterable"],
-    "types": ["node"]
+    "lib": ["es2024", "DOM", "DOM.Iterable"]
   },
   "include": ["src"]
 }

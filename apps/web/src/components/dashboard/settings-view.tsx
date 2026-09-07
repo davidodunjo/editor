@@ -2,12 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Match, Switch } from "solid-js";
+import { For, Match, Show, Switch, createResource, createSignal } from "solid-js";
 import { toast } from "somoto";
+import { VENDOR_KEYS } from "@diffusionstudio/providers";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { TextField, TextFieldInput } from "@/components/ui/text-field";
 import { pickProjectsRoot, projectsRoot } from "@/projects";
+import { keys, VENDOR_NAMES } from "@/providers";
 import { usePermissionState, type PermissionState } from "@/hooks/use-permission";
 
 import {
@@ -16,6 +20,10 @@ import {
   DashboardScrollView,
   DashboardSurfaceSection,
 } from "./shared";
+
+import type { ResolvedKey, Vendor } from "@diffusionstudio/providers";
+
+const VENDORS = Object.keys(VENDOR_KEYS) as Vendor[];
 
 function DashboardProjectsFolderSection() {
   const handleChange = async () => {
@@ -191,10 +199,110 @@ function DashboardPermissionsSection() {
   );
 }
 
+type ProviderKeyRowProps = {
+  vendor: Vendor;
+  resolved: ResolvedKey | undefined;
+  onChange(): void;
+};
+
+function ProviderKeyRow(props: ProviderKeyRowProps) {
+  const [draft, setDraft] = createSignal("");
+  const [busy, setBusy] = createSignal(false);
+
+  const name = () => VENDOR_NAMES[props.vendor];
+  const envName = () => VENDOR_KEYS[props.vendor];
+  const source = () => props.resolved?.source ?? null;
+
+  const description = () => {
+    switch (source()) {
+      case "environment": return envName();
+      case "stored": return `${envName()} · ${window.desktop ? "Stored on this device" : "Kept for this session"}`;
+      default: return `${envName()} · No key`;
+    }
+  };
+
+  const write = async (value: string | null) => {
+    setBusy(true);
+    try {
+      await keys.set(props.vendor, value);
+      setDraft("");
+      props.onChange();
+    } catch (e) {
+      toast.error(`Failed to update the ${name()} key`, { description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmit = (event: SubmitEvent) => {
+    event.preventDefault();
+    const value = draft().trim();
+    if (value) void write(value);
+  };
+
+  return (
+    <DashboardInfoActionRow
+      title={name()}
+      titleContent={
+        props.vendor === "gemini" ? (
+          <div class="flex items-center gap-2">
+            <p class="text-xs text-foreground">{name()}</p>
+            <Badge variant="base">Recommended for listen</Badge>
+          </div>
+        ) : undefined
+      }
+      description={description()}
+      action={
+        <Show
+          when={source() !== "environment"}
+          fallback={<Button variant="secondary" disabled>Set by environment</Button>}
+        >
+          <form class="flex items-center gap-2" onSubmit={handleSubmit}>
+            <TextField value={draft()} onChange={setDraft}>
+              <TextFieldInput
+                type="password"
+                uiSize="compact"
+                autocomplete="off"
+                class="w-56"
+                placeholder={source() === "stored" ? "Replace key" : "Paste API key"}
+              />
+            </TextField>
+            <Button type="submit" variant="secondary" disabled={busy() || !draft().trim()}>
+              Save
+            </Button>
+            <Show when={source() === "stored"}>
+              <Button variant="ghost" disabled={busy()} onClick={() => write(null)}>
+                Clear
+              </Button>
+            </Show>
+          </form>
+        </Show>
+      }
+    />
+  );
+}
+
+function DashboardAiProvidersSection() {
+  const [resolved, { refetch }] = createResource(() => Promise.all(VENDORS.map((vendor) => keys.get(vendor))));
+
+  return (
+    <DashboardSurfaceSection title="AI providers">
+      <DashboardDividedStack>
+        <For each={VENDORS}>
+          {(vendor, index) => (
+            <ProviderKeyRow vendor={vendor} resolved={resolved()?.[index()]} onChange={() => void refetch()} />
+          )}
+        </For>
+      </DashboardDividedStack>
+    </DashboardSurfaceSection>
+  );
+}
+
 export function DashboardSettingsView() {
   return (
     <DashboardScrollView>
       <DashboardProjectsFolderSection />
+      <DashboardAiProvidersSection />
       <DashboardPermissionsSection />
     </DashboardScrollView>
   );

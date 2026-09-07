@@ -44,6 +44,7 @@
     "@babel/preset-typescript": "^7.27.1",
     "@diffusionstudio/cli": "*",
     "@diffusionstudio/jsx": "*",
+    "@diffusionstudio/providers": "*",
     "babel-preset-solid": "^1.9.12",
     "esbuild": "^0.28.1",
     "nanoid": "^6.0.1",

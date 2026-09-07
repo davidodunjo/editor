@@ -4,17 +4,15 @@
 
 import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { pickInformativeTimes } from './frame-triage';
-import { trpc } from '@/lib/trpc';
-import { uploadBlob } from '@/lib/uploads';
+import { registry } from '@/providers';
 import { composeSheet, planSheet, planSheetSizes, sheetTimecode } from '@diffusionstudio/encoder';
 import { assert } from '@/utils';
-import { startResumableSession, uploadResumableStream } from '@/lib/uploads';
-import { filmstripAsset, formatTimecode, getAssetFile, getLibrary, Project, transcodeForAnalysis, transcodeForTranscription, waveformAsset } from '@diffusionstudio/runtime';
+import { filmstripAsset, formatTimecode, getAssetFile, getLibrary, transcodeForAnalysis, transcodeForTranscription, waveformAsset } from '@diffusionstudio/runtime';
 import { AssetLibrary, assetName, isAbsoluteSource, isUrlSource } from '@diffusionstudio/assets';
 import { createProjectFS } from '@/projects/fs';
 
 import type { Accessor } from 'solid-js';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset, AudioAsset, VideoAsset } from '@diffusionstudio/assets';
 import type { EditorSession } from './session';
 import type { MediaListenRequest, MediaListenResult, MediaFrameRequest, MediaFrameResult, TimecodedImage, MediaProbeRequest, MediaTranscribeRequest, MediaTranscribeResult, MediaFilmstripRequest, MediaFilmstripResult, MediaWaveformRequest, MediaWaveformResult, TranscriptSegment } from "@diffusionstudio/cli/channels";
 
@@ -266,12 +264,8 @@ export function handleMediaTranscribe(resolve: ResolveAsset) {
 
     let transcript = transcripts.get(asset.id);
     if (!transcript) {
-      const uploadId = crypto.randomUUID();
-      const audioFile = await transcodeForTranscription(asset);
-      const fileRef = await uploadBlob(audioFile, uploadId);
-      if (!fileRef) throw new Error(`Failed to upload asset ${id} for transcription.`);
-
-      ({ results: transcript } = await trpc.transcribe.mutate({ audio: fileRef }));
+      const audio = await transcodeForTranscription(asset);
+      transcript = await registry.run("transcription", { audio });
       if (!transcript.length || transcript.every((s) => s.words.length === 0)) {
         throw new Error("No speech detected. The audio does not appear to contain recognizable speech.");
       }
@@ -301,45 +295,35 @@ export function handleMediaWaveform(resolve: ResolveAsset) {
   };
 }
 
-export function handleMediaListen(resolve: ResolveAsset, session: Accessor<EditorSession | null>) {
+export function handleMediaListen(resolve: ResolveAsset) {
   return async (req: MediaListenRequest): Promise<MediaListenResult> => {
     const { prompt, start, end } = req;
-    let { stripVideo } = req;
     const asset = await resolve(req.path);
-    const id = asset.id;
     assert(
       asset.type === "AUDIO" || asset.type === "VIDEO",
-      `Asset ${id} is not a video or audio asset.`,
+      `Asset ${asset.id} is not a video or audio asset.`,
     );
 
-    const hasWindow = start !== undefined || end !== undefined;
-    stripVideo = stripVideo !== false && asset.type === "VIDEO";
+    const stripVideo = req.stripVideo !== false && asset.type === "VIDEO";
+    const media = await transcodeToFile(asset, { start, end, stripVideo });
+    const result = await registry.run("listen", { media, prompt });
 
-    const contentType =
-      asset.type === "VIDEO" ? (stripVideo ? "audio/ogg" : "video/mp4") : "audio/ogg";
-
-    const window = hasWindow ? `-${start ?? 0}-${end ?? "end"}` : "";
-    const uploadId = `${session()?.world.get(Project)?.id ?? "project"}-${id}-analyze${stripVideo ? "-audio" : ""}${window}`
-      .replace(/[^A-Za-z0-9._-]/g, "_");
-    const { uploadUrl, fileRef } = await trpc.getUploadUrl.mutate({
-      action: "resumable",
-      id: uploadId,
-      contentType,
-    });
-
-    // Transcoding pending
-    if (uploadUrl) {
-      const transcoder = await transcodeForAnalysis(asset, { start, end, stripVideo });
-      const sessionUrl = await startResumableSession(uploadUrl, contentType);
-      const uploadPromise = uploadResumableStream(transcoder.readable, sessionUrl);
-      await transcoder.run?.();
-      await uploadPromise;
-    }
-
-    const { analysis } = await trpc.analyze.mutate({ media: fileRef, prompt });
-
-    return { result: analysis, start, end };
+    return { result, start, end };
   };
+}
+
+async function transcodeToFile(
+  asset: VideoAsset | AudioAsset,
+  options: { start?: number; end?: number; stripVideo: boolean },
+): Promise<File> {
+  const keepsVideo = asset.type === "VIDEO" && !options.stripVideo;
+  const transcoder = await transcodeForAnalysis(asset, options);
+  const collecting = new Response(transcoder.readable).blob();
+  await transcoder.run();
+  const blob = await collecting;
+  return keepsVideo
+    ? new File([blob], `${assetName(asset)}.mp4`, { type: "video/mp4" })
+    : new File([blob], `${assetName(asset)}.ogg`, { type: "audio/ogg" });
 }
 
 async function canvasToPngBase64(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<string> {
