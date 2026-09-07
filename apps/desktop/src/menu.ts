@@ -25,35 +25,47 @@ async function installCliFromMenu() {
   }
 }
 
+const installCliItem: MenuItemConstructorOptions = {
+  label: "Install dapi Command Line Tool…",
+  enabled: app.isPackaged,
+  click: installCliFromMenu,
+};
+
+// macOS carries the item in the app menu, where users expect it.
+const macTemplate: MenuItemConstructorOptions[] = [
+  {
+    label: app.name,
+    submenu: [
+      { role: "about" },
+      { type: "separator" },
+      installCliItem,
+      { type: "separator" },
+      { role: "services" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "unhide" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  },
+  { role: "fileMenu" },
+  { role: "editMenu" },
+  { role: "viewMenu" },
+  { role: "windowMenu" },
+];
+
+// Elsewhere there is no app menu, so the item lives under File. Electron's
+// stock menu would otherwise show, with no way to reach the installer, and the
+// AppKit-only roles above (about, services, hide) have no place here.
+const defaultTemplate: MenuItemConstructorOptions[] = [
+  { label: "File", submenu: [installCliItem, { type: "separator" }, { role: "quit" }] },
+  { role: "editMenu" },
+  { role: "viewMenu" },
+  { role: "windowMenu" },
+];
+
 export function setupAppMenu() {
-  if (process.platform !== "darwin") return;
-
-  const template: MenuItemConstructorOptions[] = [
-    {
-      label: app.name,
-      submenu: [
-        { role: "about" },
-        { type: "separator" },
-        {
-          label: "Install dapi Command Line Tool…",
-          enabled: app.isPackaged,
-          click: installCliFromMenu,
-        },
-        { type: "separator" },
-        { role: "services" },
-        { type: "separator" },
-        { role: "hide" },
-        { role: "hideOthers" },
-        { role: "unhide" },
-        { type: "separator" },
-        { role: "quit" },
-      ],
-    },
-    { role: "fileMenu" },
-    { role: "editMenu" },
-    { role: "viewMenu" },
-    { role: "windowMenu" },
-  ];
-
+  const template = process.platform === "darwin" ? macTemplate : defaultTemplate;
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

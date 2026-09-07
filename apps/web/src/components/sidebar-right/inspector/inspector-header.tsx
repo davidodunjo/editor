@@ -24,7 +24,7 @@ export function InspectorHeader() {
   const zoomLabel = () => `${Math.round(scale() * 100)}%`;
 
   return (
-    <div class="h-12 shrink-0 flex items-center px-4">
+    <div class="h-12 shrink-0 flex items-center px-4 titlebar-safe">
       <span class="text-[12px] font-450 text-foreground">
         Editor
       </span>

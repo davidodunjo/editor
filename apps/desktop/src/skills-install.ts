@@ -8,6 +8,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { SkillsInstallResult } from "./main-channels";
 
+// Junctions need no privilege on Windows, where a plain directory symlink
+// requires Developer Mode or elevation; lstat/readlink still report them as
+// symbolic links, so the rest of this file treats both alike.
+const LINK_TYPE = process.platform === "win32" ? "junction" : undefined;
+// A link into any staged skills directory is ours: `resources/skills` in the
+// packaged app on every platform, `apps/desktop/skills` in development.
+const STAGED_SKILLS = /[\\/](resources|desktop)[\\/]skills[\\/]/;
+
 const AGENT_SKILLS_DIRS = [
   ".adal/skills",
   ".agents/skills",
@@ -121,7 +129,7 @@ function linkSkill(linkPath: string, target: string): void {
   } catch {
     // nothing at linkPath
   }
-  symlinkSync(target, linkPath);
+  symlinkSync(target, linkPath, LINK_TYPE);
 }
 
 export function installSkills(): SkillsInstallResult {
@@ -177,12 +185,12 @@ export function healSkillsLinks(): void {
       } catch {
         continue; // missing, or not a symlink
       }
-      const ours = target.includes("Diffusion Studio") || target.includes("/AppTranslocation/");
+      const ours = target.includes("Diffusion Studio") || target.includes("/AppTranslocation/") || STAGED_SKILLS.test(target);
       const current = join(source, name);
       if (!ours || target === current) continue;
       try {
         rmSync(linkPath);
-        symlinkSync(current, linkPath);
+        symlinkSync(current, linkPath, LINK_TYPE);
       } catch {
         // best effort — the install button remains as a manual fix
       }

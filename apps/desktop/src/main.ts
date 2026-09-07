@@ -181,11 +181,24 @@ function createWindow(show = true) {
     show: false,
     width: 1200,
     height: 800,
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 14, y: 14 },
+    // Borderless everywhere: macOS keeps its inset traffic lights; Windows and
+    // Linux get the native caption buttons overlaid on the app's own chrome,
+    // which "hiddenInset" alone would drop, leaving no way to close the window.
     ...(process.platform === "darwin"
-      ? { vibrancy: "sidebar" as const, backgroundColor: "#00000000" }
-      : { backgroundColor: "#1c1c1c" }),
+      ? {
+          titleBarStyle: "hiddenInset" as const,
+          trafficLightPosition: { x: 14, y: 14 },
+          vibrancy: "sidebar" as const,
+          backgroundColor: "#00000000",
+        }
+      : {
+          titleBarStyle: "hidden" as const,
+          titleBarOverlay: { color: "#1c1c1c", symbolColor: "#f8f8f8", height: 40 },
+          backgroundColor: "#1c1c1c",
+          // The packaged exe carries its own icon; in development the raw
+          // Electron binary would show Electron's, as the macOS dock did.
+          ...(app.isPackaged ? {} : { icon: join(app.getAppPath(), "assets", "icon-dev.png") }),
+        }),
     webPreferences: {
       preload: join(app.getAppPath(), "dist", "preload.js"),
     },

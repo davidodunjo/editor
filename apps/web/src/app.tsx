@@ -10,6 +10,7 @@ import { AppContextMenu } from "@/components/app-context-menu";
 
 import { AuthProvider, useAuth } from '@/context/auth';
 import { PersistRoute } from '@/lib/persist-route';
+import { useFullscreenState } from '@/hooks/use-fullscreen-state';
 import { EditorApi } from '@/context/dapi';
 import { UpgradeDialog } from '@/components/upgrade-dialog';
 import { PurchaseSuccess } from '@/components/purchase-success';
@@ -38,6 +39,18 @@ function AuthGate(props: { children: JSX.Element }) {
       <Show when={!auth.isAuthenticated()}>
         <LoginPage />
       </Show>
+    </Show>
+  );
+}
+
+// A borderless window can only be dragged by regions that opt in. One strip
+// along the top serves every route, so the sign-in and onboarding screens can
+// be moved too, not just the dashboard and editor, which add their own.
+function WindowDragStrip() {
+  const isFullscreen = useFullscreenState();
+  return (
+    <Show when={!!window.desktop && !isFullscreen()}>
+      <div class="fixed top-0 left-0 right-0 h-10 z-20" style="-webkit-app-region: drag;" />
     </Show>
   );
 }
@@ -74,6 +87,7 @@ function App() {
           <AppContextMenu>
             <AuthProvider>
               {props.children}
+              <WindowDragStrip />
               <BootSplash />
               <UpgradeDialog />
               <PurchaseSuccess />

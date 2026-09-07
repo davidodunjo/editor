@@ -16,18 +16,21 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const BIN = join(ROOT, "node_modules", ".bin");
+const WINDOWS = process.platform === "win32";
+const VITE = join(ROOT, "node_modules", "vite", "bin", "vite.js");
+const FORGE = join(ROOT, "node_modules", "@electron-forge", "cli", "dist", "electron-forge.js");
 const DEV_PORT = 5173;
 const DEV_URL = `http://localhost:${DEV_PORT}`;
 const children = [];
 let shuttingDown = false;
 
-function run(name, bin, args, cwd) {
-  // Spawn the tool binary directly rather than via `npm run`, so the teardown
-  // SIGTERM isn't dressed up as a "Lifecycle script failed" error by an npm
-  // wrapper. Own process group (detached) so we can signal the tool *and* its
-  // children (esbuild, electron) in one shot on teardown.
-  const child = spawn(join(BIN, bin), args, { cwd, stdio: "inherit", detached: true });
+// Tools are started from their JS entry points rather than the `.bin` shims:
+// on Windows those shims are `.cmd` files, which Node refuses to spawn without
+// a shell, and a shell would hide the real PID from teardown. Off Windows the
+// child gets its own process group so we can signal the tool *and* its
+// children (esbuild, electron) in one shot.
+function run(name, script, args, cwd) {
+  const child = spawn(process.execPath, [script, ...args], { cwd, stdio: "inherit", detached: !WINDOWS });
   child.on("exit", (code) => {
     if (shuttingDown) return;
     // A child dying on its own (e.g. Vite crashed) should bring the rest down.
@@ -43,12 +46,30 @@ function shutdown(code) {
   shuttingDown = true;
   for (const child of children) {
     try {
-      process.kill(-child.pid, "SIGTERM");
+      if (WINDOWS) {
+        execFileSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      } else {
+        process.kill(-child.pid, "SIGTERM");
+      }
     } catch {
       // Already gone.
     }
   }
   process.exit(code);
+}
+
+// Runs a workspace's build through whichever package manager launched this
+// script, so `npm run dev` and `bun run dev` both work; a bare `node
+// scripts/dev-desktop.mjs` falls back to npm.
+function buildWorkspace(pkg) {
+  const pm = process.env.npm_execpath;
+  if (pm?.endsWith(".js")) {
+    execFileSync(process.execPath, [pm, "run", "build", `--workspace=${pkg}`], { stdio: "inherit" });
+  } else if (pm) {
+    execFileSync(pm, ["run", "--filter", pkg, "build"], { stdio: "inherit" });
+  } else {
+    execFileSync("npm", ["run", "build", `--workspace=${pkg}`], { stdio: "inherit", shell: WINDOWS });
+  }
 }
 
 // Resolves once the dev server answers. Probes over HTTP against the same URL
@@ -79,11 +100,17 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => shutdown(0));
 }
 
-/** PIDs listening on a TCP port (macOS/Linux via lsof); [] when none or unknown. */
+function powershell(command) {
+  return execFileSync("powershell", ["-NoProfile", "-Command", command], { stdio: ["ignore", "pipe", "ignore"] }).toString();
+}
+
+/** PIDs listening on a TCP port; [] when none or unknown. */
 function listeners(port) {
   try {
-    const out = execFileSync("lsof", ["-nP", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"], { stdio: ["ignore", "pipe", "ignore"] });
-    return out.toString().split("\n").map((line) => Number(line.trim())).filter(Boolean);
+    const out = WINDOWS
+      ? powershell(`(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue).OwningProcess`)
+      : execFileSync("lsof", ["-nP", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"], { stdio: ["ignore", "pipe", "ignore"] }).toString();
+    return [...new Set(out.split("\n").map((line) => Number(line.trim())).filter(Boolean))];
   } catch {
     return []; // lsof exits 1 when nothing listens.
   }
@@ -92,9 +119,24 @@ function listeners(port) {
 /** The command line of a process, or "" when it is gone. */
 function commandOf(pid) {
   try {
-    return execFileSync("ps", ["-o", "command=", "-p", String(pid)], { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    const out = WINDOWS
+      ? powershell(`(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`)
+      : execFileSync("ps", ["-o", "command=", "-p", String(pid)], { stdio: ["ignore", "pipe", "ignore"] }).toString();
+    return out.trim();
   } catch {
     return "";
+  }
+}
+
+function kill(pid, force) {
+  try {
+    if (WINDOWS) {
+      execFileSync("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      process.kill(pid, force ? "SIGKILL" : "SIGTERM");
+    }
+  } catch {
+    // Already gone.
   }
 }
 
@@ -107,25 +149,20 @@ function commandOf(pid) {
 async function reclaimPort(port) {
   const pids = listeners(port);
   if (!pids.length) return;
+  const here = ROOT.replace(/[\\/]$/, "");
   for (const pid of pids) {
     const command = commandOf(pid);
-    if (!command.includes("vite") || !command.includes(ROOT.replace(/\/$/, ""))) {
+    if (!command.includes("vite") || !command.includes(here)) {
       console.error(`[dev:desktop] port ${port} is in use by another process (pid ${pid}): ${command || "unknown"}`);
       process.exit(1);
     }
     console.log(`[dev:desktop] port ${port} held by a stale vite (pid ${pid}); stopping it…`);
-    try {
-      process.kill(pid, "SIGTERM");
-    } catch {
-      // Already gone.
-    }
+    kill(pid, false);
   }
   const deadline = Date.now() + 5000;
   while (listeners(port).length) {
     if (Date.now() > deadline) {
-      for (const pid of listeners(port)) {
-        try { process.kill(pid, "SIGKILL"); } catch { /* gone */ }
-      }
+      for (const pid of listeners(port)) kill(pid, true);
       await new Promise((r) => setTimeout(r, 200));
       break;
     }
@@ -135,12 +172,12 @@ async function reclaimPort(port) {
 
 // 1. Build the CLI (blocking) so `dapi` and the app agree on the latest code.
 console.log("[dev:desktop] building CLI…");
-execFileSync("npm", ["run", "build", "--workspace=@diffusionstudio/cli"], { stdio: "inherit" });
+buildWorkspace("@diffusionstudio/cli");
 
 // 2. Start the web dev server, on a port that is free.
 await reclaimPort(DEV_PORT);
 console.log("[dev:desktop] starting web dev server…");
-run("web", "vite", [], join(ROOT, "apps", "web"));
+run("web", VITE, [], join(ROOT, "apps", "web"));
 
 // 3. Once it is up, build the desktop app (blocking, mirrors its `dev`
 // script) and launch Electron, which loads :5173.
@@ -151,6 +188,6 @@ try {
   shutdown(1);
 }
 console.log("[dev:desktop] building desktop app…");
-execFileSync("npm", ["run", "build", "--workspace=@diffusionstudio/desktop"], { stdio: "inherit" });
+buildWorkspace("@diffusionstudio/desktop");
 console.log("[dev:desktop] starting desktop app…");
-run("desktop", "electron-forge", ["start"], join(ROOT, "apps", "desktop"));
+run("desktop", FORGE, ["start"], join(ROOT, "apps", "desktop"));
