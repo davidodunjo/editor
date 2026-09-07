@@ -33,7 +33,7 @@ Generation, transcription, `media listen`, upscaling and background removal call
 | Replicate | `REPLICATE_API_TOKEN` |
 | ElevenLabs | `ELEVENLABS_API_KEY` |
 
-[`dapi models`](./models.md) and [`dapi voices`](./voices.md) list every model and voice with its `provider` and whether it is `available`, so an agent can tell what will work before declaring it. A request whose model has no configured provider fails with `No configured provider offers the model "<id>". Add its API key in Settings.` Local transcription (Whisper) and local speech (Piper) are next.
+[`dapi models`](./models.md) and [`dapi voices`](./voices.md) list every model and voice with its `provider` and whether it is `available`, so an agent can tell what will work before declaring it. A request whose model has no configured provider fails with `No configured provider offers the model "<id>". Add its API key in Settings.` Transcription runs locally with Whisper and needs no key; local speech is next.
 
 ## Commands
 

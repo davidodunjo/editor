@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-export { falImages, falVideos } from "./fal";
-export { gemini } from "./gemini";
-export { createWhisper } from "./whisper";
-export type { ModelFiles, ModelStore } from "./whisper";
+declare module "*?url" {
+  const url: string;
+  export default url;
+}

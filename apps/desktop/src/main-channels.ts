@@ -67,12 +67,19 @@ export const MAIN_CHANNELS = {
   PROJECTS_FS_STAT: "projects:fs-stat",
   PROJECTS_FS_REMOVE: "projects:fs-remove",
   PROJECTS_FS_REAL_PATH: "projects:fs-real-path",
+  MODELS_STATUS: "models:status",
+  MODELS_DOWNLOAD: "models:download",
 
   // Main→Renderer events
   WINDOW_FULLSCREEN_CHANGE: "window:fullscreen-change",
   HEADLESS_MODE: "headless:mode",
   PROJECTS_CHANGED: "projects:changed",
+  MODELS_PROGRESS: "models:progress",
 } as const;
+
+export type ModelFiles = { repo: string; files: string[] };
+export type ModelStatus = { present: boolean; bytes: number };
+export type ModelProgress = { repo: string; loaded: number; total: number };
 
 /**
  * A project folder under the projects root: a real npm package with a JSX
@@ -197,6 +204,8 @@ export type MainRequestMap = {
   [MAIN_CHANNELS.PROJECTS_FS_STAT]: { request: { dir: string; source: string }; response: FsStat | null };
   [MAIN_CHANNELS.PROJECTS_FS_REMOVE]: { request: { dir: string; path: string }; response: void };
   [MAIN_CHANNELS.PROJECTS_FS_REAL_PATH]: { request: { dir: string; source: string }; response: string | null };
+  [MAIN_CHANNELS.MODELS_STATUS]: { request: ModelFiles; response: ModelStatus };
+  [MAIN_CHANNELS.MODELS_DOWNLOAD]: { request: ModelFiles; response: void };
 };
 
 export type FsEntry = {
@@ -215,6 +224,7 @@ export type MainEventMap = {
   [MAIN_CHANNELS.HEADLESS_MODE]: { active: boolean };
   // A file inside a watched project folder changed (path relative to `dir`).
   [MAIN_CHANNELS.PROJECTS_CHANGED]: { dir: string; path: string };
+  [MAIN_CHANNELS.MODELS_PROGRESS]: ModelProgress;
 };
 export type MainEventChannel = keyof MainEventMap;
 

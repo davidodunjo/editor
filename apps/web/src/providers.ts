@@ -4,8 +4,9 @@
 
 import { MAIN_CHANNELS } from "@desktop/main-channels";
 import { layeredKeys, memoryKeys, ProviderRegistry } from "@diffusionstudio/providers";
-import { gemini } from "@diffusionstudio/providers/providers";
+import { createWhisper, falImages, falVideos, gemini } from "@diffusionstudio/providers/providers";
 import { mainBridge } from "@/lib/ipc";
+import { modelStore } from "@/models";
 
 import type { KeyStore, Vendor } from "@diffusionstudio/providers";
 
@@ -34,4 +35,4 @@ function browserKeys(): KeyStore {
 
 export const keys = window.desktop ? desktopKeys() : browserKeys();
 
-export const registry = new ProviderRegistry([gemini], keys);
+export const registry = new ProviderRegistry([createWhisper(modelStore), gemini, falImages, falVideos], keys);

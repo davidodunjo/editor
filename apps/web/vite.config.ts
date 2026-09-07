@@ -20,6 +20,9 @@ export default defineConfig({
   define: {
     APP_VERSION: JSON.stringify(pkg.version),
   },
+  optimizeDeps: {
+    include: ['@huggingface/transformers'],
+  },
   server: {
     port: 5173,
     strictPort: true,

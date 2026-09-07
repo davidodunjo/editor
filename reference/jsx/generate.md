@@ -34,7 +34,7 @@ export default function Project() {
 
 Declarations are **pure**: calling `generate.*` validates its options and returns a ref; nothing is requested until an element carrying it mounts. A ref that is never used by a mounted element (directly or as an input to another asset) is never generated. Declarations may live at module scope or inside components.
 
-Generation runs through the providers configured in Settings > AI providers or via environment variables (see [AI providers](../README.md#ai-providers)). A declaration whose model has no configured provider fails with `No configured provider offers the model "<id>"`; [`dapi models`](../models.md) shows which are `available`.
+Generation runs through the providers configured in Settings > AI providers or via environment variables (see [AI providers](../README.md#ai-providers)). Image and video models run through fal with a `FAL_KEY`; [`dapi models`](../models.md) lists them with the endpoint each maps to. A declaration whose model has no configured provider fails with `No configured provider offers the model "<id>"`; `dapi models` shows which are `available`.
 
 Generation is **asynchronous and non-blocking**: the element is on the canvas immediately, showing a generating state, and its paint attaches when the asset lands. [`dapi context`](../context.md) reports where each one stands — generating, failed with the reason, or done with the library path it landed as — and a declaration that fails leaves its element carrying an [`error`](./errors.md#failed-sources).
 

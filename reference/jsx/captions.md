@@ -9,7 +9,7 @@
 </scene>
 ```
 
-Transcription runs through a configured provider (see [AI providers](../README.md#ai-providers)); without one the node carries an [`error`](./errors.md#failed-sources) saying so. Local transcription (Whisper) is next.
+Transcription runs **locally with Whisper** by default (`whisper-base`; see [`media transcribe`](../media/transcribe.md#models) for the models and their download sizes): no account or API key is needed, and the audio never leaves the machine. The first transcription downloads the model (a toast shows progress); later ones start at once. If the download fails, the node carries an [`error`](./errors.md#failed-sources) saying so.
 
 Transcription is **asynchronous and non-blocking**: the caption node is on the canvas from the moment the project mounts and its transcript attaches once ready. Because it reads the scene's audible mix, it waits until **every other source in the scene has landed** — a generated `voice` or `audio` track is transcribed at its final placement, not at the placeholder. The scene must contain an unmuted, unhidden audio or video source; without one the node carries an [`error`](./errors.md#failed-sources) saying so.
 

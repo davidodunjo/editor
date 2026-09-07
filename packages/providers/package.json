@@ -14,9 +14,12 @@
   },
   "dependencies": {
     "@diffusionstudio/assets": "*",
-    "@diffusionstudio/jsx": "*"
+    "@diffusionstudio/jsx": "*",
+    "@huggingface/transformers": "4.2.0",
+    "onnxruntime-web": "1.26.0-dev.20260416-b7804b056c"
   },
   "devDependencies": {
+    "@webgpu/types": "^0.1.71",
     "typescript": "~5.9.3"
   }
 }

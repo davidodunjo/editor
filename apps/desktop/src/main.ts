@@ -15,6 +15,7 @@ import { setupAppMenu } from "./menu";
 import { mainBridge } from "./main-manager";
 import { MAIN_CHANNELS } from "./main-channels";
 import { getSecret, readVendorEnvironment, setSecret } from "./secrets";
+import { downloadModels, modelsStatus, registerModelsScheme, serveModels } from "./models";
 import {
   compileProject,
   createProject,
@@ -54,6 +55,7 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+registerModelsScheme();
 
 let setNativeCornerRadius: ((handle: Buffer, radius: number) => void) | null = null;
 let setNativeBackdrop:
@@ -223,6 +225,10 @@ if (app.requestSingleInstanceLock()) {
   mainBridge.handle(MAIN_CHANNELS.SECRETS_GET, ({ name }) => getSecret(name));
   mainBridge.handle(MAIN_CHANNELS.SECRETS_SET, ({ name, value }) => setSecret(name, value));
   mainBridge.handle(MAIN_CHANNELS.ENV_GET, ({ names }) => readVendorEnvironment(names));
+  mainBridge.handle(MAIN_CHANNELS.MODELS_STATUS, (model) => modelsStatus(model));
+  mainBridge.handle(MAIN_CHANNELS.MODELS_DOWNLOAD, (model, event) =>
+    downloadModels(BrowserWindow.fromWebContents(event.sender), model),
+  );
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_PICK_ROOT, () => pickRoot(mainWindow));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_DEFAULT_ROOT, () => defaultRoot(mainWindow));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_LIST, ({ root }) => listProjects(root));
@@ -300,6 +306,7 @@ if (app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler(() => true);
     session.defaultSession.setDevicePermissionHandler(() => true);
 
+    serveModels();
     startCliServer();
     healSkillsLinks();
     createWindow(!isHiddenLaunch(process.argv));

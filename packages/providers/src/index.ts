@@ -32,7 +32,7 @@ export type Inputs = {
   };
   sound: { model: string; prompt: string; duration?: number; seed?: number };
   speech: { model: string; voice: string; text: string; seed?: number };
-  transcription: { audio: File };
+  transcription: { audio: File; model?: string };
   listen: { media: File; prompt?: string };
   upscale: { media: File };
   background: { image: File };

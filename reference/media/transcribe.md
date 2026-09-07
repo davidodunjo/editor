@@ -2,7 +2,19 @@
 
 Transcribes the speech in a video or audio asset and returns the timed transcript. Word-level start/end times are in **seconds** (source/content time).
 
-Transcription runs through a configured provider (see [AI providers](../README.md#ai-providers)); without one the command exits non-zero. Local transcription (Whisper) is next.
+Transcription runs **locally with Whisper**: no account or API key is needed, and the audio never leaves the machine. The first transcription downloads the model into the app's data folder (a toast in the app shows progress); later ones start at once.
+
+## Models
+
+Whisper runs on the GPU through WebGPU when the machine has one, and on the CPU otherwise (a smaller, quantized download).
+
+| Model | Download (GPU / CPU) | Notes |
+| ----- | -------------------- | ----- |
+| `whisper-base` (default) | ~206 MB / ~77 MB | Fast; fine for clear speech. |
+| `whisper-small` | ~586 MB / ~249 MB | More accurate on accents, names and noisy audio. |
+| `whisper-large-v3-turbo` | ~1.6 GB | Most accurate; needs WebGPU with 16-bit float support. |
+
+Whisper detects the language itself and transcribes in it.
 
 ## Input
 
@@ -23,6 +35,8 @@ One JSON object, the transcript:
 }
 ```
 
+A segment is a sentence (split on `.`, `?`, `!`), or up to 40 words when the speech carries no punctuation.
+
 ## Errors
 
-Exits non-zero if the path can't be resolved or the asset is not a video/audio asset, or if no speech is detected in the audio at all (`No speech detected`).
+Exits non-zero if the path can't be resolved or the asset is not a video/audio asset, if no speech is detected in the audio at all (`No speech detected`), or if the model download fails (no network on first use).

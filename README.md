@@ -98,7 +98,7 @@ npm run make --workspace=@diffusionstudio/desktop
 
 ## Status
 
-Windows support is complete: development, packaging and the CLI. Sign-in, billing and telemetry are removed; the app runs offline with no account and needs no env file. Generation, transcription, `dapi media listen`, upscaling and background removal run through providers you configure with your own API keys, in Settings > AI providers or as environment variables (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FAL_KEY`, `REPLICATE_API_TOKEN`, `ELEVENLABS_API_KEY`), which take precedence. `dapi models` and `dapi voices` show which models are available. Gemini is the provider for `dapi media listen`. Local transcription (Whisper) and local speech (Piper) are next.
+Windows support is complete: development, packaging and the CLI. Sign-in, billing and telemetry are removed; the app runs offline with no account and needs no env file. Generation, transcription, `dapi media listen`, upscaling and background removal run through providers you configure with your own API keys, in Settings > AI providers or as environment variables (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FAL_KEY`, `REPLICATE_API_TOKEN`, `ELEVENLABS_API_KEY`), which take precedence. `dapi models` and `dapi voices` show which models are available. Gemini is the provider for `dapi media listen`; fal provides image and video generation. Transcription and captions run locally with Whisper, downloaded on first use, and need no key. Local speech is next.
 
 ## License
 
