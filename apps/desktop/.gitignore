@@ -4,3 +4,7 @@ out
 cli
 docs
 skills
+
+# Development certificate
+devcert.pfx
+*.pfx

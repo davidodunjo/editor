@@ -3,9 +3,10 @@
   "private": true,
   "version": "0.204.2",
   "license": "MPL-2.0",
+  "author": "David Odunjo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/diffusionstudio/editor.git"
+    "url": "https://github.com/davidodunjo/editor.git"
   },
   "main": "dist/main.js",
   "scripts": {
@@ -23,7 +24,10 @@
     "make": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && npm run stage:skills && electron-forge make",
     "publish": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && npm run stage:skills && electron-forge publish",
     "make:icns": "sh scripts/make-icns.sh",
-    "make:ico": "electron scripts/make-ico.mjs"
+    "make:ico": "electron scripts/make-ico.mjs",
+    "make:assets": "winapp manifest update-assets assets/icon.png --manifest Package.appxmanifest",
+    "msix": "npm run package && node scripts/make-msix.mjs",
+    "msix:install": "npm run package && node scripts/make-msix.mjs --install"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",

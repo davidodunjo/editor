@@ -4,11 +4,15 @@
 
 import { app } from "electron";
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CliInstallResult } from "./main-channels";
 
-export const CLI_LINK_PATH = "/usr/local/bin/dapi";
+const WINDOWS = process.platform === "win32";
+
+export const CLI_LINK_PATH = WINDOWS
+  ? join(process.env.LOCALAPPDATA ?? "", "Microsoft", "WindowsApps", "dapi.cmd")
+  : "/usr/local/bin/dapi";
 
 // The dev workflow links the workspace build into Homebrew's bin instead
 // (`symlink:create` in apps/cli), so both locations count as installed.
@@ -29,6 +33,15 @@ function linkCli(): Promise<void> {
   });
 }
 
+// The MSIX execution alias resolves to whichever version is installed, and
+// the CLI bundle sits beside that exe, so the shim never goes stale.
+const WINDOWS_SHIM = [
+  "@echo off",
+  "set ELECTRON_RUN_AS_NODE=1",
+  `diffusionstudio.exe --eval "process.argv.splice(1, 0, 'dapi'); require(require('path').join(require('path').dirname(process.execPath), 'resources', 'cli', 'dapi.js'))" -- %*`,
+  "",
+].join("\r\n");
+
 export async function installCli(): Promise<CliInstallResult> {
   if (!app.isPackaged) {
     return {
@@ -37,7 +50,11 @@ export async function installCli(): Promise<CliInstallResult> {
     };
   }
   try {
-    await linkCli();
+    if (WINDOWS) {
+      writeFileSync(CLI_LINK_PATH, WINDOWS_SHIM);
+    } else {
+      await linkCli();
+    }
     return { status: "installed" };
   } catch (e) {
     const message = (e as Error).message ?? "";

@@ -43,7 +43,8 @@ writeFileSync(
   ),
 );
 
-execFileSync("npm", ["install", "--omit=dev", "--no-audit", "--no-fund", "--no-package-lock"], {
+const npm = process.env.npm_execpath?.endsWith(".js") ? [process.execPath, process.env.npm_execpath] : ["npm"];
+execFileSync(npm[0], [...npm.slice(1), "install", "--omit=dev", "--no-audit", "--no-fund", "--no-package-lock"], {
   cwd: stageDir,
   stdio: "inherit",
 });

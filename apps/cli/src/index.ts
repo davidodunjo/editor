@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -332,17 +332,28 @@ async function checkNode(id: string): Promise<void> {
 
 type OpenOptions = { background?: boolean };
 
-/** `open -a` on a running app only activates it, so this is safe to always run. */
+/** Launching a running app only activates it, so this is safe to always run. */
 function launchApp(background: boolean): Promise<boolean> {
+  if (process.platform === "win32") {
+    const { ELECTRON_RUN_AS_NODE: _, ...env } = process.env;
+    return new Promise((res) => {
+      const child = spawn("diffusionstudio.exe", background ? ["--hidden"] : [], { detached: true, stdio: "ignore", env });
+      child.once("error", () => res(false));
+      child.once("spawn", () => {
+        child.unref();
+        res(true);
+      });
+    });
+  }
   const args = background ? ["-g", "-a", APP_NAME, "--args", "--hidden"] : ["-a", APP_NAME];
   return new Promise((res) => execFile("open", args, (err) => res(!err)));
 }
 
 async function openProject(path: string | undefined, opts: OpenOptions): Promise<void> {
-  // Launching is macOS's job; elsewhere (and when the app is not installed,
-  // e.g. a dev checkout run from the terminal) fall through to the socket,
-  // which answers if the app is running and errors usefully if not.
-  const launched = process.platform === "darwin" && (await launchApp(opts.background ?? false));
+  // Launching is the installed app's job; elsewhere (and when the app is not
+  // installed, e.g. a dev checkout run from the terminal) fall through to the
+  // socket, which answers if the app is running and errors usefully if not.
+  const launched = await launchApp(opts.background ?? false);
 
   try {
     // A cold launch needs the renderer up before the app can answer; when

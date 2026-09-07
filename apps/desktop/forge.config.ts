@@ -10,10 +10,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const { version } = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'));
+const { repository } = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
+
+const [owner, name] = new URL(repository.url).pathname.replace(/^\/|\.git$/g, '').split('/');
 
 const config: ForgeConfig = {
   packagerConfig: {
     name: 'Diffusion Studio',
+    ...(process.platform === 'win32' ? { executableName: 'DiffusionStudio' } : {}),
     appBundleId: 'studio.diffusion.editor',
     appCategoryType: 'public.app-category.video',
     appVersion: version,
@@ -60,7 +64,7 @@ const config: ForgeConfig = {
   ],
   publishers: [
     new PublisherGithub({
-      repository: { owner: 'diffusionstudio', name: 'editor' },
+      repository: { owner, name },
       draft: true,
     }),
   ],
