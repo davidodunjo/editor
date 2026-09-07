@@ -43,7 +43,6 @@ import { DashboardSearchPanel } from "./search-bar";
 import { DashboardProjectsFolderBar } from "./projects-folder-bar";
 import { projectRoute } from "@/hooks/use-project-route";
 import { Icon } from "../ui/icon";
-import { track } from "@/lib/analytics";
 import {
   createProject,
   deleteProject,
@@ -106,8 +105,6 @@ export function DashboardProjectsView() {
 
   const openProject = (project: ProjectInfo) => {
     if (renamingProject() === project.dir) return;
-
-    track('project_opened');
     navigate(projectRoute(projectKey(project)));
   };
 
@@ -122,7 +119,6 @@ export function DashboardProjectsView() {
     try {
       await deleteProject(project.dir);
       forgetProjectBundle(project.id);
-      track('project_deleted');
       setSelectedProject((current) => (current === project.dir ? null : current));
       refetchProjects();
     } catch (e) {
@@ -146,7 +142,6 @@ export function DashboardProjectsView() {
   const handleDuplicate = async (project: ProjectInfo) => {
     try {
       await duplicateProject(project.dir);
-      track('project_duplicated');
       refetchProjects();
     } catch (e) {
       toast.error("Failed to duplicate project", { description: (e as Error).message });
@@ -227,7 +222,6 @@ export function DashboardProjectsView() {
       if (!(await ensureProjectsRoot())) return;
 
       const project = await createProject(generateProjectName());
-      track('project_created');
       refetchProjects();
       openProject(project);
     } catch (e) {

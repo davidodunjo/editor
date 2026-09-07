@@ -2,6 +2,8 @@
 
 Puts a multimodal model in front of an audio track and returns its answer. With no prompt it returns a general description of what is heard; with `--prompt` it answers that question about the audio (e.g. "who is speaking?", "what music is playing?", "summarize what is said"). Accepts an audio file or a video, but only the audio track is analyzed by default. Alias: `watch`.
 
+The model runs through a configured cloud backend; without one the command exits non-zero. It is moving to user-supplied API keys and local models.
+
 ## Input
 
 - `<path>`: a local audio or video file to analyze in place without adding it to the library, or a project library path (required; library paths need an open project).

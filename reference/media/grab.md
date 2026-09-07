@@ -1,6 +1,6 @@
 # `dapi media grab <path>`
 
-Decodes one or more frames of a video asset at the given times and merges them into **contact sheets**: up to 12 frames per PNG, each cell labelled with its timecode and drawn as large as the sheet allows, so a handful of frames arrives as one high-resolution picture instead of a directory to open one by one. `--separate` writes a PNG per frame instead. Like [`capture`](../capture.md), but grabs the asset's own pixels (unlike `capture`, which renders the composited node). Renders locally; no credits. Past ~12 frames, [`media filmstrip`](./filmstrip.md) is the cheaper way to scan a clip.
+Decodes one or more frames of a video asset at the given times and merges them into **contact sheets**: up to 12 frames per PNG, each cell labelled with its timecode and drawn as large as the sheet allows, so a handful of frames arrives as one high-resolution picture instead of a directory to open one by one. `--separate` writes a PNG per frame instead. Like [`capture`](../capture.md), but grabs the asset's own pixels (unlike `capture`, which renders the composited node). Renders locally. Past ~12 frames, [`media filmstrip`](./filmstrip.md) is the cheaper way to scan a clip.
 
 ## Input
 

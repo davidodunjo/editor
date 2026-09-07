@@ -4,8 +4,6 @@
 
 import { Show, type JSX } from "solid-js";
 import { Icon } from "@/components/ui/icon";
-import { useAuth } from "@/context/auth";
-import { useAvatar } from "@/hooks/use-avatar";
 import { cx } from "@/lib/cva";
 
 type DashboardSidebarItemProps = {
@@ -85,61 +83,6 @@ export function DashboardSidebarNav(props: DashboardSidebarNavProps) {
       <div class="flex shrink-0 flex-col">
         {props.footer}
       </div>
-    </div>
-  );
-}
-
-type DashboardSidebarUserProps = {
-  active: boolean;
-  onClick: () => void;
-};
-
-export function DashboardSidebarUser(props: DashboardSidebarUserProps) {
-  const auth = useAuth();
-
-  const displayName = () => {
-    const user = auth.user();
-    return user?.user_metadata?.full_name || user?.email || "User";
-  };
-
-  const planLabel = () => (auth.isPro() ? "Pro Plan" : "Free Plan");
-
-  const initial = () => displayName().charAt(0).toUpperCase();
-  const avatarUrl = useAvatar();
-
-  return (
-    <div class="p-2">
-      <button
-        type="button"
-        onClick={props.onClick}
-        class="flex w-full items-center gap-2 rounded-md p-2 text-left hover:bg-accent focus-ring"
-        classList={{ "bg-accent": props.active }}
-      >
-        <Show
-          when={avatarUrl()}
-          fallback={
-            <div class="grid size-8 shrink-0 place-items-center rounded-full bg-input text-xs text-foreground">
-              {initial()}
-            </div>
-          }
-        >
-          {(url) => (
-            <img
-              src={url()}
-              alt=""
-              class="size-8 shrink-0 rounded-full object-cover"
-            />
-          )}
-        </Show>
-        <div class="flex min-w-0 flex-1 flex-col justify-center">
-          <span class="truncate text-xs font-450 text-foreground">
-            {displayName()}
-          </span>
-          <span class="truncate text-xxs text-muted-foreground">
-            {planLabel()}
-          </span>
-        </div>
-      </button>
     </div>
   );
 }

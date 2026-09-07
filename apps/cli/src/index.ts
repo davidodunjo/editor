@@ -13,7 +13,7 @@ import { version } from "../../../package.json";
 import { parseTime, TIME_FPS } from "@diffusionstudio/jsx";
 import { editor, errnoCode, EXPORT_TIMEOUT_MS, GENERATE_TIMEOUT_MS, waitForCliSocket } from "./cli-client";
 import { listLocalFonts } from "./fonts";
-import { buildIssueBody, createIssue } from "./report";
+import { buildIssueBody, createIssue, REPO } from "./report";
 import { fetchVideo } from "./ytdlp";
 import { MAX_FRAMES_PER_SHEET } from "./protocol";
 import type { AssetRef, FrameQuality, LogEntry, LogLevel, TimecodedImage } from "./protocol";
@@ -379,15 +379,6 @@ async function context(): Promise<void> {
   }
 }
 
-async function whoami(): Promise<void> {
-  try {
-    const result = await editor.whoami.query();
-    console.log(JSON.stringify(result));
-  } catch (e) {
-    handleSocketError(e);
-  }
-}
-
 const LOG_LEVELS = ["debug", "info", "warning", "error"] as const;
 
 type LogsOptions = { tail?: string; level?: string };
@@ -667,7 +658,7 @@ program
 program
   .command("check")
   .description(
-    `Check a node's subtree for obvious structural mistakes, without rendering (local analysis, no credits): spans where no visual is scheduled (likely black frames), children that never become visible, zero-duration or fully transparent nodes, and assets that failed to load or generate — plus subtree stats (node count by kind, nesting depth, played duration). Prints one JSON object; times in issue ranges are seconds relative to the node's start — for a scene whose workarea starts at 0, the same clock \`capture --time\` uses. Exits 1 when an error-severity issue is found. Structural only: a scheduled clip can still render black (dark footage, content smaller than the canvas), so confirm suspicious spans visually with \`capture\`.`,
+    `Check a node's subtree for obvious structural mistakes, without rendering (local analysis): spans where no visual is scheduled (likely black frames), children that never become visible, zero-duration or fully transparent nodes, and assets that failed to load or generate — plus subtree stats (node count by kind, nesting depth, played duration). Prints one JSON object; times in issue ranges are seconds relative to the node's start — for a scene whose workarea starts at 0, the same clock \`capture --time\` uses. Exits 1 when an error-severity issue is found. Structural only: a scheduled clip can still render black (dark footage, content smaller than the canvas), so confirm suspicious spans visually with \`capture\`.`,
   )
   .argument("<id>", 'node id to check or `file:id` when two files use the same id')
   .action((id: string) => checkNode(id));
@@ -682,7 +673,7 @@ const media = program
 media
   .command("probe")
   .description(
-    `Read the container and per-track technical metadata of a media file (local read, no credits): container format, duration, tags, and each track's codec params, without decoding. Commonly useful for a quick technical read, e.g. checking codec compatibility or duration before cutting. Packet stats (fps, bitrate) are estimated from a leading sample; images and transcripts report file-level info only.`,
+    `Read the container and per-track technical metadata of a media file (local read): container format, duration, tags, and each track's codec params, without decoding. Commonly useful for a quick technical read, e.g. checking codec compatibility or duration before cutting. Packet stats (fps, bitrate) are estimated from a leading sample; images and transcripts report file-level info only.`,
   )
   .argument("<path>", "local file path")
   .action((ref: string) => mediaProbe(ref));
@@ -699,7 +690,7 @@ media
   .command("grab")
   .alias("sample")
   .description(
-    `Decode frames of a video file and write them as PNGs (local render, no credits). By default the frames are merged into contact sheets: up to 12 per image, each cell labelled with its timecode (\`08s10f\`, zero segments dropped) and drawn as large as fits, so a handful of frames arrives as one high-resolution picture instead of a directory to open one by one (\`--separate\` writes a PNG per frame). Grabs the asset's own pixels, unlike \`capture\` which renders the composited node. The recommended tool for understanding a video at the frame level; past ~12 frames prefer \`media filmstrip\`.`,
+    `Decode frames of a video file and write them as PNGs (local render). By default the frames are merged into contact sheets: up to 12 per image, each cell labelled with its timecode (\`08s10f\`, zero segments dropped) and drawn as large as fits, so a handful of frames arrives as one high-resolution picture instead of a directory to open one by one (\`--separate\` writes a PNG per frame). Grabs the asset's own pixels, unlike \`capture\` which renders the composited node. The recommended tool for understanding a video at the frame level; past ~12 frames prefer \`media filmstrip\`.`,
   )
   .argument("<path>", "local video file path to grab frames from")
   .option("-t, --time <time...>", `one or more timestamps to grab — seconds ("1.5"), frames ("45f"), or "MM:SS"; negatives count back from the end, so -1 is one second before the end and -1f one frame before it (default: 0)`)
@@ -718,7 +709,7 @@ media
   .command("filmstrip")
   .alias("film")
   .description(
-    `Render a grid of thumbnails sampled across the timeline to a PNG (local render, no credits), each row stamped with an HH:MM:SS:FF ruler. A fast, token-efficient video track preview; narrow the window to zoom into a region of interest. Video only (use \`media waveform\` for audio).`,
+    `Render a grid of thumbnails sampled across the timeline to a PNG (local render), each row stamped with an HH:MM:SS:FF ruler. A fast, token-efficient video track preview; narrow the window to zoom into a region of interest. Video only (use \`media waveform\` for audio).`,
   )
   .argument("<path>", "local video file path to preview")
   .option("-s, --start <time>", `start of the window to preview — seconds, "45f" frames, or "MM:SS" (default: 0)`)
@@ -731,7 +722,7 @@ media
   .command("waveform")
   .alias("wave")
   .description(
-    `Render the audio track of a video or audio file as a waveform PNG (local render, no credits) with a timestamp ruler: loudness over time, with silent stretches highlighted in red. A fast, token-efficient audio track preview; the silent spans are also returned as second ranges.`,
+    `Render the audio track of a video or audio file as a waveform PNG (local render) with a timestamp ruler: loudness over time, with silent stretches highlighted in red. A fast, token-efficient audio track preview; the silent spans are also returned as second ranges.`,
   )
   .argument("<path>", "local video or audio file path to preview")
   .option("-s, --start <time>", `start of the window to preview — seconds, "45f" frames, or "MM:SS" (default: 0)`)
@@ -766,11 +757,6 @@ program
   .action(() => listVoices());
 
 program
-  .command("whoami")
-  .description(`Print the authenticated account, or null if signed out.`)
-  .action(() => whoami());
-
-program
   .command("logs")
   .description(
     `Print recent console output from the running app (what the devtools console shows: page logs, worker logs, uncaught errors), oldest first, one line per entry: local time, level, message, source location. The app buffers the last 2000 entries across reloads and project switches, so this replaces relaunching with ELECTRON_ENABLE_LOGGING=1 when debugging renderer-side behavior.`,
@@ -791,7 +777,7 @@ program
   .command("report")
   .alias("issue")
   .description(
-    `Report a bug in dapi or the app itself. Files a GitHub issue on diffusionstudio/editor with diagnostics attached (dapi version, platform, recent app logs) and prints its URL. Submits immediately and publicly through the gh CLI, which must be installed and authenticated; there is no review step, so only report real defects and check the attached logs for anything private.`,
+    `Report a bug in dapi or the app itself. Files a GitHub issue on ${REPO} with diagnostics attached (dapi version, platform, recent app logs) and prints its URL. Submits immediately and publicly through the gh CLI, which must be installed and authenticated; there is no review step, so only report real defects and check the attached logs for anything private.`,
   )
   .argument("<title>", "one-line summary of the problem")
   .option("-b, --body <text>", "what happened, in markdown: expected vs actual, and anything the diagnostics won't show")

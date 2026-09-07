@@ -1,6 +1,6 @@
 # `dapi media filmstrip <path>`
 
-Renders a **filmstrip** of a video to a PNG, written to a file in the system temp directory: a grid of frames sampled at even intervals across the window, each row stamped with a timestamp ruler. Video only; use [`dapi media waveform`](./waveform.md) to inspect the audio track. Renders locally; no credits. Alias: `film`.
+Renders a **filmstrip** of a video to a PNG, written to a file in the system temp directory: a grid of frames sampled at even intervals across the window, each row stamped with a timestamp ruler. Video only; use [`dapi media waveform`](./waveform.md) to inspect the audio track. Renders locally. Alias: `film`.
 
 Tick labels use `HH:MM:SS:FF` timecode (hours, minutes, seconds, frame within the second) at every zoom level, so labels stay comparable regardless of the window's span. Frames count against the video's frame rate.
 

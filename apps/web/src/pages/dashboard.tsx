@@ -5,14 +5,10 @@
 import { useSearchParams } from "@solidjs/router";
 import { Match, Show, Switch } from "solid-js";
 
-import { DashboardAccountView } from "@/components/dashboard/account-view";
-import { DashboardAiCreditsView } from "@/components/dashboard/ai-credits-view";
-import { DashboardBillingView } from "@/components/dashboard/billing-view";
-import { DashboardGetDesktopApp } from "@/components/dashboard/get-desktop-app";
 import { DashboardHelpView } from "@/components/dashboard/help-view";
 import { DashboardProjectsView } from "@/components/dashboard/projects-view";
 import { DashboardSettingsView } from "@/components/dashboard/settings-view";
-import { DashboardSidebarHeader, DashboardSidebarNav, DashboardSidebarUser, DashboardSidebarItem } from "@/components/dashboard/sidebar";
+import { DashboardSidebarHeader, DashboardSidebarNav, DashboardSidebarItem } from "@/components/dashboard/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { useFullscreenState } from "@/hooks/use-fullscreen-state";
 
@@ -21,9 +17,6 @@ import type { DashboardView } from "@/components/dashboard/types";
 const DASHBOARD_VIEWS: readonly DashboardView[] = [
   "projects",
   "templates",
-  "ai-credits",
-  "billing",
-  "account",
   "settings",
   "preferences",
   "help",
@@ -51,8 +44,6 @@ export function DashboardPage() {
         <DashboardSidebarNav
           footer={
             <>
-              <DashboardSidebarItem active={view() === "ai-credits"} onClick={() => setView("ai-credits")} icon="ai-generate" label="AI credits" />
-              <DashboardSidebarItem active={view() === "billing"} onClick={() => setView("billing")} icon="billing" label="Billing" />
               <DashboardSidebarItem active={view() === "settings"} onClick={() => setView("settings")} icon="settings" label="Settings" />
               <DashboardSidebarItem active={view() === "help"} onClick={() => setView("help")} icon="help" label="Help" />
             </>
@@ -60,7 +51,6 @@ export function DashboardPage() {
         >
           <DashboardSidebarItem active={view() === "projects"} onClick={() => setView("projects")} icon="diffusion-project-file" label="Projects" />
         </DashboardSidebarNav>
-        <DashboardSidebarUser active={view() === "account"} onClick={() => setView("account")} />
       </aside>
 
       <Separator orientation="vertical" class="bg-border-strong" />
@@ -70,15 +60,6 @@ export function DashboardPage() {
           <Match when={view() === "projects"}>
             <DashboardProjectsView />
           </Match>
-          <Match when={view() === "ai-credits"}>
-            <DashboardAiCreditsView />
-          </Match>
-          <Match when={view() === "billing"}>
-            <DashboardBillingView />
-          </Match>
-          <Match when={view() === "account"}>
-            <DashboardAccountView />
-          </Match>
           <Match when={view() === "settings"}>
             <DashboardSettingsView />
           </Match>
@@ -86,7 +67,6 @@ export function DashboardPage() {
             <DashboardHelpView />
           </Match>
         </Switch>
-        <DashboardGetDesktopApp />
       </section>
     </div>
   );

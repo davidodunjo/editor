@@ -2,43 +2,40 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Router, HashRouter, Route, useLocation } from '@solidjs/router';
+import { Router, HashRouter, Route } from '@solidjs/router';
 import { ColorModeProvider } from '@kobalte/core';
-import { Show, createEffect, type JSX } from 'solid-js';
+import { Show, createSignal, onCleanup, onMount, type JSX } from 'solid-js';
 import { Toaster } from "@/components/ui/sonner";
 import { AppContextMenu } from "@/components/app-context-menu";
 
-import { AuthProvider, useAuth } from '@/context/auth';
 import { PersistRoute } from '@/lib/persist-route';
+import { mainBridge } from '@/lib/ipc';
+import { MAIN_CHANNELS } from '@desktop/main-channels';
 import { useFullscreenState } from '@/hooks/use-fullscreen-state';
 import { EditorApi } from '@/context/dapi';
-import { UpgradeDialog } from '@/components/upgrade-dialog';
-import { PurchaseSuccess } from '@/components/purchase-success';
 import { ScreenTooSmall } from '@/components/screen-too-small';
 import { UnsupportedBrowser } from '@/components/unsupported-browser';
 import { ProjectPage } from '@/pages/project';
-import { LoginPage } from '@/pages/login';
 import { OnboardingPage, onboardingCompleted } from '@/pages/onboarding';
-import { AuthCallbackPage } from '@/pages/auth-callback';
 import { NotFoundPage } from '@/pages/not-found';
 import { DashboardPage } from '@/pages/dashboard';
 
-function AuthGate(props: { children: JSX.Element }) {
-  const auth = useAuth();
+function OnboardingGate(props: { children: JSX.Element }) {
+  const [headless, setHeadless] = createSignal(false);
+
+  onMount(() => {
+    if (!window.desktop) return;
+
+    mainBridge
+      .call(MAIN_CHANNELS.HEADLESS_GET_MODE, undefined)
+      .then(setHeadless);
+
+    onCleanup(mainBridge.handle(MAIN_CHANNELS.HEADLESS_MODE, ({ active }) => setHeadless(active)));
+  });
 
   return (
-    <Show when={!auth.isLoading()}>
-      <Show when={auth.isAuthenticated() || auth.headless()}>
-        <Show
-          when={onboardingCompleted() || auth.headless()}
-          fallback={<OnboardingPage />}
-        >
-          {props.children}
-        </Show>
-      </Show>
-      <Show when={!auth.isAuthenticated()}>
-        <LoginPage />
-      </Show>
+    <Show when={onboardingCompleted() || headless()} fallback={<OnboardingPage />}>
+      {props.children}
     </Show>
   );
 }
@@ -53,26 +50,8 @@ function WindowDragStrip() {
 }
 
 function BootSplash() {
-  const auth = useAuth();
-
-  createEffect(() => {
-    if (auth.isLoading()) return;
-    document.getElementById('boot-splash')?.remove();
-  });
-
+  onMount(() => document.getElementById('boot-splash')?.remove());
   return null;
-}
-
-function EnvironmentOverlays() {
-  const location = useLocation();
-  const onCheckoutPage = () => location.pathname.startsWith('/checkout');
-
-  return (
-    <Show when={!onCheckoutPage()}>
-      <ScreenTooSmall />
-      <UnsupportedBrowser />
-    </Show>
-  );
 }
 
 function App() {
@@ -82,24 +61,20 @@ function App() {
       root={(props) => (
         <ColorModeProvider initialColorMode="dark">
           <AppContextMenu>
-            <AuthProvider>
-              {props.children}
-              <WindowDragStrip />
-              <BootSplash />
-              <UpgradeDialog />
-              <PurchaseSuccess />
-              <EditorApi />
-            </AuthProvider>
+            {props.children}
+            <WindowDragStrip />
+            <BootSplash />
+            <EditorApi />
           </AppContextMenu>
           <Toaster />
-          <EnvironmentOverlays />
+          <ScreenTooSmall />
+          <UnsupportedBrowser />
           <PersistRoute />
         </ColorModeProvider>
       )}
     >
-      <Route path="/auth/callback" component={AuthCallbackPage} />
-      <Route path="/" component={() => <AuthGate><DashboardPage /></AuthGate>} />
-      <Route path="/projects/*ref" component={() => <AuthGate><ProjectPage /></AuthGate>} />
+      <Route path="/" component={() => <OnboardingGate><DashboardPage /></OnboardingGate>} />
+      <Route path="/projects/*ref" component={() => <OnboardingGate><ProjectPage /></OnboardingGate>} />
       <Route path="*404" component={NotFoundPage} />
     </RouterComponent>
   );

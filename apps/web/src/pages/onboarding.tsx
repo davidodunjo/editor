@@ -9,10 +9,8 @@ import { toast } from 'somoto';
 import { MAIN_CHANNELS } from '@desktop/main-channels';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { downloadDesktopApp } from '@/lib/desktop-app';
 import { createStoredSignal } from '@/lib/store';
 import { mainBridge } from '@/lib/ipc';
-import { track } from '@/lib/analytics';
 import { store } from '@/init';
 
 const SKILLS_COMMAND = 'npx skills add diffusionstudio/skills -g -y --all';
@@ -28,7 +26,7 @@ type StepState = 'todo' | 'busy' | 'done';
 type SetupRowProps = {
   title: string;
   description: string;
-  action: JSX.Element;
+  action?: JSX.Element;
 };
 
 function SetupRow(props: SetupRowProps) {
@@ -73,13 +71,12 @@ function StepButton(props: StepButtonProps) {
 }
 
 /**
- * Post-signup screen for setting up the agent dependencies: the dapi CLI and
- * the agent skills. Shown by AuthGate until dismissed; the dismissal is
- * per-device (same store as the promo banners).
+ * First-run screen for setting up the agent dependencies: the dapi CLI and
+ * the agent skills. Shown until dismissed; the dismissal is per-device.
  *
  * On desktop the CLI button links the bundled CLI into PATH via main (the
- * same flow as the "Install dapi Command Line Tool…" menu item); on the web,
- * where the CLI can't be installed, it offers the desktop app instead.
+ * same flow as the "Install dapi Command Line Tool…" menu item). On the web
+ * the CLI cannot be installed, so only the skills step has an action.
  */
 export function OnboardingPage() {
   const isDesktop = !!window.desktop;
@@ -105,7 +102,6 @@ export function OnboardingPage() {
     try {
       const result = await mainBridge.call(MAIN_CHANNELS.CLI_INSTALL, undefined);
       if (result.status === 'installed') {
-        track('onboarding_cli_installed');
         setCliState('done');
       } else {
         setCliState('todo');
@@ -121,15 +117,9 @@ export function OnboardingPage() {
     }
   };
 
-  const downloadApp = () => {
-    downloadDesktopApp('onboarding');
-    setCliState('done');
-  };
-
   const copySkillsCommand = async () => {
     try {
       await navigator.clipboard.writeText(SKILLS_COMMAND);
-      track('onboarding_skills_copied');
       setSkillsState('done');
       toast('Copied!', {
         description: 'Run the command in your terminal to install the agent skills.',
@@ -146,7 +136,6 @@ export function OnboardingPage() {
     try {
       const result = await mainBridge.call(MAIN_CHANNELS.SKILLS_INSTALL, undefined);
       if (result.status === 'installed') {
-        track('onboarding_skills_installed');
         setSkillsState('done');
         return;
       }
@@ -160,12 +149,9 @@ export function OnboardingPage() {
     }
   };
 
-  const allDone = () => cliState() === 'done' && skillsState() === 'done';
+  const allDone = () => (!isDesktop || cliState() === 'done') && skillsState() === 'done';
 
-  const finish = (event: 'onboarding_completed' | 'onboarding_skipped') => {
-    track(event);
-    setOnboardingCompleted(true);
-  };
+  const finish = () => setOnboardingCompleted(true);
 
   return (
     <div class="flex flex-col bg-background fixed inset-0 z-999">
@@ -195,7 +181,7 @@ export function OnboardingPage() {
                     : 'The command line tool for agents. Ships with the desktop app.'
                 }
                 action={
-                  isDesktop ? (
+                  <Show when={isDesktop}>
                     <StepButton
                       state={cliState()}
                       label="Install"
@@ -203,14 +189,7 @@ export function OnboardingPage() {
                       doneLabel="Installed"
                       onClick={installCli}
                     />
-                  ) : (
-                    <StepButton
-                      state={cliState()}
-                      label="Get app"
-                      doneLabel="Downloaded"
-                      onClick={downloadApp}
-                    />
-                  )
+                  </Show>
                 }
               />
 
@@ -242,14 +221,10 @@ export function OnboardingPage() {
           </div>
 
           <div class="flex items-center gap-2 px-2">
-            <Button disabled={!allDone()} onClick={() => finish('onboarding_completed')}>
+            <Button disabled={!allDone()} onClick={finish}>
               Get started
             </Button>
-            <Button
-              variant="ghost"
-              class="text-muted-foreground"
-              onClick={() => finish('onboarding_skipped')}
-            >
+            <Button variant="ghost" class="text-muted-foreground" onClick={finish}>
               Setup later
             </Button>
           </div>

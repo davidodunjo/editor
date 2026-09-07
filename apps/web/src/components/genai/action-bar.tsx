@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createMemo, Show } from "solid-js";
-import { useGenerationRecords } from "./use-generation-records";
+import { useGenerationConfig } from "./use-generation-config";
 import { useGenerateImage } from "./use-generate-image";
 import { useGenerateVideo } from "./use-generate-video";
 import { useGenerateVoice } from "./use-generate-voice";
@@ -40,7 +40,7 @@ export function ActionBar(props: ActionBarProps) {
   const { generate: generateVoice } = useGenerateVoice();
   const { generate: generateAudio } = useGenerateAudio();
   const { generate: autoCaptions, hasScene } = useAutoCaptions();
-  const { isGenerated, totalCredits, firstConfig } = useGenerationRecords();
+  const { isGenerated, firstConfig } = useGenerationConfig();
 
   const isImage = createMemo(() => imageNodes().length > 0);
   const isVideo = createMemo(() => videoNodes().length > 0);
@@ -142,11 +142,6 @@ export function ActionBar(props: ActionBarProps) {
                   />
                   <DropdownMenuPortal>
                     <DropdownMenuContent>
-                      <div class="flex items-center gap-1 px-0 pr-2 h-7">
-                        <Icon name="ai-generate" class="size-6 text-muted-foreground" />
-                        <span class="text-xs text-muted-foreground">{totalCredits()} AI credits used</span>
-                      </div>
-                      <Separator class="my-1" />
                       <DropdownMenuGroup>
                         <DropdownMenuItem onSelect={handleMakeVideo}>
                           <Icon name="film-video-export" class="size-6 mr-2 text-foreground" />
@@ -200,11 +195,6 @@ export function ActionBar(props: ActionBarProps) {
                   />
                   <DropdownMenuPortal>
                     <DropdownMenuContent>
-                      <div class="flex items-center gap-1 px-0 pr-2 h-7">
-                        <Icon name="ai-generate" class="size-6 text-muted-foreground" />
-                        <span class="text-xs text-muted-foreground">{totalCredits()} AI credits used</span>
-                      </div>
-                      <Separator class="my-1" />
                       <DropdownMenuGroup>
                         <DropdownMenuItem onSelect={handleRerun}>
                           <Icon name="rerun" class="size-6 mr-2 text-foreground" />

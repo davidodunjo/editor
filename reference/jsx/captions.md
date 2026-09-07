@@ -13,7 +13,7 @@ Transcription is **asynchronous and non-blocking**: the caption node is on the c
 
 ## Bringing your own transcript
 
-Give `src` a transcript file — `.srt`, `.vtt`, or a transcript `.json` — and it is mounted as it is; no transcription runs and no credits are spent. It resolves like any other [`src`](./media.md) (library path, asset id, path, URL), except that `generate.*` is not accepted.
+Give `src` a transcript file — `.srt`, `.vtt`, or a transcript `.json` — and it is mounted as it is; no transcription runs. It resolves like any other [`src`](./media.md) (library path, asset id, path, URL), except that `generate.*` is not accepted.
 
 ```tsx
 <captions src="transcripts/interview.srt" preset="classic" />
@@ -38,9 +38,9 @@ The preset positions the caption block; `verticalAlign` overrides only its verti
 
 ## Caching
 
-A transcript is cached under **the scene's id and the `seed`**, and the cached asset is reused whenever that pair comes up again — so reopening a project transcribes nothing and consumes no credits.
+A transcript is cached under **the scene's id and the `seed`**, and the cached asset is reused whenever that pair comes up again — so reopening a project transcribes nothing.
 
-The audio itself is not part of the key. **Recutting a scene does not re-transcribe it**: to pick up changed audio, bump `seed`. A value used before replays that take from cache; a value that has not been used for this scene transcribes it again, which costs credits.
+The audio itself is not part of the key. **Recutting a scene does not re-transcribe it**: to pick up changed audio, bump `seed`. A value used before replays that take from cache; a value that has not been used for this scene transcribes it again.
 
 ## Trimming
 

@@ -24,7 +24,7 @@ dapi open ~/Projects/basics
 | [10-typegpu.tsx](10-typegpu.tsx) | TypeGPU on a `<surface>`: shaders written in TypeScript (`'use gpu'`), compiled through the project's own [babel config](../reference/jsx/module.md#compile-time-plugins-babel-config) |
 | [11-redraw.tsx](11-redraw.tsx) | [Redraw](https://redraw.dev) on a `<surface>`: the docs' Hello World write-on stroke, a vendored-tarball package driven by composition time; the surface spans one animation cycle, `@inspect` variables tune it, and `useResolution` keeps it sharp at any export size |
 
-Requirements: `02-genai.tsx` consumes generation credits (results are cached per session);
+Requirements: `02-genai.tsx` generates assets through the configured cloud backend (results are cached per session);
 `01-basics.tsx`, `06-three.tsx`, and `08-shader-paint.tsx` fetch remote media.
 `10-typegpu.tsx` and `11-redraw.tsx` need packages installed in the project folder
 and a babel config next to the entry — the commands are in their header comments.

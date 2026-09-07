@@ -8,7 +8,7 @@ A project is a folder of that JSX, and **the source is the document**: the app c
 
 ## Groups
 
-**Top-level:** [`whoami`](./whoami.md), [`logs`](./logs.md), [`screenshot`](./screenshot.md), [`report`](./report.md), [`context`](./context.md) (alias `ctx`), [`capture`](./capture.md), [`check`](./check.md), [`export`](./export.md), [`models`](./models.md), [`voices`](./voices.md), [`fonts`](./fonts.md), [`fetch`](./fetch.md).
+**Top-level:** [`logs`](./logs.md), [`screenshot`](./screenshot.md), [`report`](./report.md), [`context`](./context.md) (alias `ctx`), [`capture`](./capture.md), [`check`](./check.md), [`export`](./export.md), [`models`](./models.md), [`voices`](./voices.md), [`fonts`](./fonts.md), [`fetch`](./fetch.md).
 
 | Group | Alias | Scope |
 | ----- | ----- | ----- |
@@ -18,12 +18,12 @@ How the surface is divided:
 
 - AI asset generation (image / video / speech / audio) is declared in the project module (`generate.*`, see [jsx/generate.md](./jsx/generate.md)). `models` and `voices` list what those declarations can reference.
 - Inspecting an existing asset (probe / transcribe / listen / filmstrip / waveform / grab) lives under `media`.
+- Everything runs locally and needs no account, except what calls an AI model: `generate.*` declarations, `media transcribe`, `media listen`, and `<captions>` transcription. These currently require a configured cloud backend and fail without one; they are moving to user-supplied API keys and local models.
 
 ## Commands
 
 ### App
 
-- [`dapi whoami`](./whoami.md): print the authenticated account
 - [`dapi logs`](./logs.md): recent console output from the running app
 - [`dapi screenshot`](./screenshot.md): capture the entire application window as a PNG
 - [`dapi report`](./report.md): file a GitHub issue about a bug in the CLI or the app, with diagnostics attached
@@ -71,7 +71,7 @@ Time inputs take the `Time` format unless noted otherwise. Times in **outputs** 
 ## Conventions
 
 - **Stdout is JSON.** Commands that return a single record emit one JSON value. Commands that return a collection emit JSON Lines (one object per line, no surrounding array) so per-item results stay streamable. Exceptions: `fonts --names-only` writes plain family names; `logs` writes plain formatted log lines.
-- **Unix-style names are canonical.** Commands without a natural Unix equivalent (`context`, `whoami`) keep their descriptive names.
+- **Unix-style names are canonical.** Commands without a natural Unix equivalent (`context`) keep their descriptive names.
 - **Stderr:** human-readable error messages.
 - **Exit codes:** `0` on success, `1` on any error (missing file, app not running, invalid input, IPC error).
 - **App must be running:** every command except `fonts` and `fetch` talks to the open Diffusion Studio instance. If the app isn't running, the CLI prints an instruction to launch it and exits `1`. `report` is the one command that reads from the app but tolerates its absence, recording it in the issue instead of failing.

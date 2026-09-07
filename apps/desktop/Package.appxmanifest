@@ -50,9 +50,6 @@
             </uap:VisualElements>
 
             <Extensions>
-                <uap:Extension Category="windows.protocol">
-                    <uap:Protocol Name="diffusion" />
-                </uap:Extension>
                 <uap5:Extension
                     Category="windows.appExecutionAlias"
                     Executable="DiffusionStudio.exe"

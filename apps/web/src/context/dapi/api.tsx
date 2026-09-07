@@ -7,7 +7,6 @@ import { useNavigate } from "@solidjs/router";
 import { useWorld } from '@diffusionstudio/koota-solid';
 import { Project } from '@diffusionstudio/runtime';
 import { useProject } from '@/context/project';
-import { useAuth } from '@/context/auth';
 import { useEngineContext } from '@/engine';
 import { t, q, q0, m } from "@/lib/cli-rpc";
 import { editorSession, requireEditorSession, setEditorSession } from "./session";
@@ -29,7 +28,6 @@ import { useFullscreenState } from "@/hooks/use-fullscreen-state";
 
 import type { JSX, Accessor } from 'solid-js';
 import type { Navigator } from '@solidjs/router';
-import type { User } from '@supabase/supabase-js';
 
 type EditorApiProviderProps = {
   children: JSX.Element;
@@ -47,24 +45,11 @@ const EditorApiContext = createContext<EditorApiContextValue>();
  * is reachable whether or not a project is open; the ones that need one read
  * the session slot (see ./session) per request and fail with a clear error —
  * or, for `context`, report that nothing is open. Renders nothing; must sit
- * inside the router tree for `useNavigate` and inside the auth provider.
+ * inside the router tree for `useNavigate`.
  */
 export function EditorApi() {
   const navigate = useNavigate();
-  const auth = useAuth();
-
-  const requireAuth = <I, O>(fn: (data: I) => Promise<O>) => (data: I) => {
-    assert(auth.isAuthenticated(), "Sign in required: AI generation needs a Diffusion Studio account.");
-    return fn(data);
-  };
-
-  const getUser = () => {
-    const user = auth.user();
-    assert(user, "User not found");
-    return user;
-  };
-
-  const router = createAppRouter({ navigate, getUser, requireAuth });
+  const router = createAppRouter(navigate);
   onCleanup(cliBridge.register(createRouterCaller(router)));
   return null;
 }
@@ -100,13 +85,7 @@ export function EditorApiProvider(props: EditorApiProviderProps) {
 }
 
 
-type AppRouterDeps = {
-  navigate: Navigator;
-  getUser: () => User;
-  requireAuth: <I, O>(fn: (data: I) => Promise<O>) => (data: I) => Promise<O>;
-};
-
-function createAppRouter({ navigate, getUser, requireAuth }: AppRouterDeps) {
+function createAppRouter(navigate: Navigator) {
   const resolveAsset = createAssetResolver(editorSession);
 
   return t.router({
@@ -116,7 +95,6 @@ function createAppRouter({ navigate, getUser, requireAuth }: AppRouterDeps) {
       navigate(projectRoute(project.id || project.name));
       return { id: project.id, name: project.displayName, dir: project.dir };
     }),
-    whoami: t.procedure.query(() => getUser()),
     context: q0(handleContextGet(editorSession)),
     capture: q(handleCapture(requireEditorSession)),
     check: q(handleCheck(requireEditorSession)),
@@ -131,7 +109,7 @@ function createAppRouter({ navigate, getUser, requireAuth }: AppRouterDeps) {
       transcribe: q(handleMediaTranscribe(resolveAsset)),
       filmstrip: q(handleMediaFilmstrip(resolveAsset)),
       waveform: q(handleMediaWaveform(resolveAsset)),
-      listen: q(requireAuth(handleMediaListen(resolveAsset, editorSession))),
+      listen: q(handleMediaListen(resolveAsset, editorSession)),
     }),
   });
 }

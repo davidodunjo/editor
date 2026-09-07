@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-export type DashboardView = | "projects" | "templates" | "ai-credits" | "billing" | "account" | "settings" | "preferences" | "help";
+export type DashboardView = | "projects" | "templates" | "settings" | "preferences" | "help";
 export type ProjectSortOption = | "last-viewed" | "alphabetical" | "date-created";
 export type TemplateSourceOption = "official" | "custom";
 export type TemplatePreviewKind = "landscape" | "portrait" | "square";

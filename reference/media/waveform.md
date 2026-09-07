@@ -1,6 +1,6 @@
 # `dapi media waveform <path>`
 
-Renders the audio track of a video or audio file as an amplitude **waveform** PNG, written to a file in the system temp directory: loudness over time drawn from decoded audio peaks, with a timestamp ruler. Silent stretches are highlighted in red. Renders locally; no credits. Alias: `wave`.
+Renders the audio track of a video or audio file as an amplitude **waveform** PNG, written to a file in the system temp directory: loudness over time drawn from decoded audio peaks, with a timestamp ruler. Silent stretches are highlighted in red. Renders locally. Alias: `wave`.
 
 Tick labels use `HH:MM:SS:FF` timecode (hours, minutes, seconds, frame within the second) at every zoom level, so labels stay comparable regardless of the window's span. For a video, frames count against the video's frame rate; for a standalone audio asset, the ruler counts against a nominal 30 fps.
 

@@ -4,36 +4,18 @@
 
 import { createTRPCClient, httpBatchLink, TRPCClientError, type TRPCLink } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
-import { supabase } from "./supabase";
-import { showUpgradeDialog } from "@/components/upgrade-dialog";
 
 import type { AppRouter } from "@diffusionstudio/api-contract";
 
-const paymentRequiredLink: TRPCLink<AppRouter> = () => ({ next, op }) =>
+export const CLOUD_AI_UNAVAILABLE = "Cloud AI is not available in this build yet";
+
+const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+
+const unavailableLink: TRPCLink<AppRouter> = () => ({ op }) =>
   observable((observer) => {
-    const sub = next(op).subscribe({
-      next: (value) => observer.next(value),
-      error: (err) => {
-        if (err instanceof TRPCClientError && err.data?.code === "PAYMENT_REQUIRED") {
-          showUpgradeDialog();
-        }
-        observer.error(err);
-      },
-      complete: () => observer.complete(),
-    });
-    return () => sub.unsubscribe();
+    observer.error(TRPCClientError.from(new Error(CLOUD_AI_UNAVAILABLE), { meta: { path: op.path } }));
   });
 
 export const trpc = createTRPCClient<AppRouter>({
-  links: [
-    paymentRequiredLink,
-    httpBatchLink({
-      url: `${import.meta.env.VITE_API_URL ?? ""}/api/trpc`,
-      async headers() {
-        const session = await supabase?.auth.getSession();
-        const token = session?.data.session?.access_token;
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      },
-    }),
-  ],
+  links: [apiUrl ? httpBatchLink({ url: `${apiUrl}/api/trpc` }) : unavailableLink],
 });

@@ -4,8 +4,9 @@
 
 import { spawn } from "node:child_process";
 import { arch, platform, release } from "node:os";
+import { repository } from "../../../package.json";
 
-const REPO = "diffusionstudio/editor";
+export const REPO = new URL(repository.url).pathname.replace(/^\/|\.git$/g, "");
 
 export const GH_MISSING =
   "gh (GitHub CLI) is not installed, so the issue cannot be filed. Install it from https://cli.github.com, run `gh auth login`, then retry.";

@@ -8,23 +8,6 @@ import { store } from "@/init";
 
 const ROUTE_KEY = "last-route";
 
-// Query params that trigger one-shot UI (dialogs) and must not replay on relaunch.
-const TRANSIENT_PARAMS = ["checkout"];
-
-function sanitizeRoute(route: string): string | null {
-  if (!route || route.startsWith("/auth/")) return null;
-
-  const [path = "/", query = ""] = route.split("?");
-  const params = new URLSearchParams(query);
-
-  for (const param of TRANSIENT_PARAMS) {
-    params.delete(param);
-  }
-
-  const qs = params.toString();
-  return qs ? `${path}?${qs}` : path;
-}
-
 /**
  * Desktop loads index.html with a bare URL on every launch, so unlike the
  * browser the hash route (and the ?project= param inside it) is lost across
@@ -47,10 +30,7 @@ export function PersistRoute() {
 
   createEffect(() => {
     if (!window.desktop) return;
-    const route = sanitizeRoute(location.pathname + location.search);
-    if (route) {
-      store.set(ROUTE_KEY, route);
-    }
+    store.set(ROUTE_KEY, location.pathname + location.search);
   });
 
   return null;

@@ -9,7 +9,6 @@ import { insertAsset } from "@/engine/insert-asset";
 import { droppedFiles, importFiles } from "@/engine/asset-actions";
 import { Toolbar } from "./toolbar";
 import { DrawOverlay } from "./draw-overlay";
-import { DesktopAppBanner } from "./desktop-app-banner";
 import { toast } from "somoto"
 import { SceneInitOverlay } from "./scene-init-overlay";
 import { ASSET_DRAG_TYPE } from "@/components/sidebar-left/folder-item";
@@ -76,7 +75,6 @@ export function Canvas() {
         on:dragover={handleDragOver}
       >
         <Toolbar />
-        <DesktopAppBanner />
         <DrawOverlay />
         <SceneInitOverlay />
         <EngineCanvas />

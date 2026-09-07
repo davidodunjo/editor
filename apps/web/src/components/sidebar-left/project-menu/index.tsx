@@ -17,29 +17,20 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
-import { Show, onCleanup, onMount } from "solid-js";
+import { onCleanup, onMount } from "solid-js";
 import { isInputTarget } from "@/utils";
-import { useEditorApi } from "@/context/dapi";
-import { downloadDesktopApp } from "@/lib/desktop-app";
 import { FileMenu } from "./file-menu";
 import { EditMenu } from "./edit-menu";
 import { ViewMenu } from "./view-menu";
 import { ToolMenu } from "./tool-menu";
-import { AiCreditsMenu } from "./ai-credits-menu";
 import { HelpMenu } from "./help-menu";
 
 export function ProjectMenu() {
   const navigate = useNavigate();
-  const { isDesktop } = useEditorApi();
 
   const handleOpenDashboard = () => {
     (document.activeElement as HTMLElement)?.blur?.();
     navigate("/?dashboard=projects");
-  };
-
-  const handleOpenAccount = () => {
-    (document.activeElement as HTMLElement)?.blur?.();
-    navigate("/?dashboard=account");
   };
 
   /**
@@ -125,15 +116,6 @@ export function ProjectMenu() {
 
             <DropdownMenuGroup>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>AI credits</DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent class="w-[188px]">
-                    <AiCreditsMenu />
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-
-              <DropdownMenuSub>
                 <DropdownMenuSubTrigger>Help</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent class="w-[188px]">
@@ -141,25 +123,7 @@ export function ProjectMenu() {
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
-
-              <DropdownMenuItem onSelect={handleOpenAccount}>Account</DropdownMenuItem>
             </DropdownMenuGroup>
-
-            <Show when={!isDesktop}>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  class="gap-1 pl-0 pr-2"
-                  onSelect={() => downloadDesktopApp("main_menu")}
-                >
-                  <span class="grid h-7 w-6 shrink-0 place-items-center overflow-clip">
-                    <Icon name="download" class="size-6" />
-                  </span>
-                  Get desktop app (macOS)
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </Show>
           </DropdownMenuContent>
         </DropdownMenuPortal>
       </DropdownMenu>

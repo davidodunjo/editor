@@ -2,6 +2,8 @@
 
 Transcribes the speech in a video or audio asset and returns the timed transcript. Word-level start/end times are in **seconds** (source/content time).
 
+Transcription runs through a configured cloud backend; without one the command exits non-zero. It is moving to user-supplied API keys and local models.
+
 ## Input
 
 - `<path>`: a local video or audio file to transcribe in place without adding it to the library, or a project library path (required; library paths need an open project).

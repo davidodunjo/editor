@@ -4,6 +4,8 @@ Lists the generation models available for a media type, including each model's c
 
 There are no CLI commands that generate; asset generation is declared in the project module and produced on mount.
 
+The list itself is local and needs no account. Producing an asset with one of these models currently requires a configured cloud backend; generation is moving to user-supplied API keys and local models.
+
 ## Input
 
 - `[type]` (optional): one of `image`, `video`, `audio`. Omit to list all three groups.

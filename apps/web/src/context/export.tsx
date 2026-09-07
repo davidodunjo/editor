@@ -7,11 +7,10 @@ import { toast } from "somoto";
 import { canEncodeVideo } from "mediabunny";
 import { useWorld } from "@diffusionstudio/koota-solid";
 import { computeOutputSize } from "@diffusionstudio/encoder";
-import { Computed, FrameRate, getActiveEntity } from "@diffusionstudio/runtime";
+import { Computed, getActiveEntity } from "@diffusionstudio/runtime";
 import { assert, downloadObject, isInputTarget } from "@/utils";
 import { useEngineContext } from "@/engine";
 import { useProject } from "@/context/project";
-import { track } from "@/lib/analytics";
 import { ExportProgress, type ExportConfig } from "@/components/sidebar-right/inspector/export-progress";
 import { renderScene, renderOverlay, cancelRender } from "@/context/render";
 import {
@@ -36,9 +35,6 @@ export function ExportProvider(props: { children: JSX.Element }) {
   const project = useProject();
 
   const exporting = () => !!renderOverlay();
-
-  const sceneDurationSeconds = (scene: Entity) =>
-    (scene.get(Computed)?.duration ?? 0) / (world.get(FrameRate)?.value || 30);
 
   const exportScene: ExportContextValue["exportScene"] = async (scene, config) => {
     if (!scene?.isAlive()) return;
@@ -96,16 +92,6 @@ export function ExportProvider(props: { children: JSX.Element }) {
       return;
     }
 
-    track('export_started', {
-      format,
-      resolution: config.video?.resolution,
-      fps: config.video?.fps,
-      video_codec: config.video?.codec,
-      audio_codec: config.audio?.codec,
-      scene_duration_s: Math.round(sceneDurationSeconds(scene)),
-    });
-    const startedAt = performance.now();
-
     try {
       const result = await renderScene(engine, { scene, target, config, dir: project.dir() });
 
@@ -114,32 +100,15 @@ export function ExportProvider(props: { children: JSX.Element }) {
         toast.error("Export failed", {
           description: result.error.message,
         });
-        track('export_failed', {
-          format,
-          duration_ms: Math.round(performance.now() - startedAt),
-          error: result.error.message?.slice(0, 200) ?? 'unknown',
-        });
       } else if (result.type === "success") {
         toast("Export complete", {
           description: "Your video has been successfully exported",
-        });
-        track('export_completed', {
-          format,
-          resolution: config.video?.resolution,
-          fps: config.video?.fps,
-          scene_duration_s: Math.round(sceneDurationSeconds(scene)),
-          duration_ms: Math.round(performance.now() - startedAt),
         });
       }
     } catch (e) {
       console.error("Export failed:", e);
       toast.error("Export failed", {
         description: (e as Error).message,
-      });
-      track('export_failed', {
-        format,
-        duration_ms: Math.round(performance.now() - startedAt),
-        error: (e as Error).message?.slice(0, 200) ?? 'unknown',
       });
     }
   };

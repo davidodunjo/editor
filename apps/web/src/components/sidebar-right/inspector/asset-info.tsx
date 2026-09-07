@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Button } from "@/components/ui/button";
-import { For, Show, Match, Switch, createMemo, createResource, createSignal, type Accessor } from "solid-js";
+import { For, Show, Match, Switch, createMemo, createSignal, type Accessor } from "solid-js";
 import {
   formatAspectRatio,
   formatBytes,
@@ -13,8 +13,7 @@ import {
   formatAssetDate
 } from "@/utils/formatters";
 import { AssetInfoPreview } from "./asset-info-preview";
-import { supabase } from "@/lib/supabase";
-import { toClientConfig } from "@/components/genai/use-generation-records";
+import { generationSpecOf } from "@/utils/gen-ai";
 import { useWorld } from "@diffusionstudio/koota-solid";
 import { assetName } from "@diffusionstudio/assets";
 import { useLibrary } from "@/engine/library";
@@ -113,22 +112,6 @@ export function AssetInfoPanel() {
 }
 
 export function useAssetMetadataRows(asset: Accessor<Asset | undefined>) {
-  const generationId = createMemo(() => asset()?.generation?.id ?? null);
-
-  const [config] = createResource(() => generationId(), async (id) => {
-    if (!id || !supabase) return undefined;
-    const { data, error } = await supabase
-      .from("usage_records")
-      .select("config")
-      .eq("id", id)
-      .maybeSingle();
-    if (error) {
-      console.error("[asset-info] Failed to load generation record", error);
-      return undefined;
-    }
-    return toClientConfig(data?.config);
-  });
-
   return createMemo(() => {
     const a = asset();
     if (!a) return [];
@@ -152,9 +135,9 @@ export function useAssetMetadataRows(asset: Accessor<Asset | undefined>) {
         : null;
     const imported = formatAssetDate(a.createdAt);
     const modified = a.stat ? formatAssetDate(a.stat.mtime) : null;
-    const c = config();
-    const prompt = c?.prompt ?? null;
-    const model = c?.model ?? null;
+    const spec = generationSpecOf(a);
+    const prompt = spec?.prompt ?? null;
+    const model = spec?.model ?? null;
 
     return [
       { label: "Dimensions", value: dimensions },

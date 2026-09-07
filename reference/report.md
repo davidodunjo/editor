@@ -1,6 +1,6 @@
 # `dapi report <title>`
 
-Reports a bug in `dapi` itself or in the app behind it: a command that errors, contradicts this reference, or returns something it shouldn't. Bundles the description with diagnostics (dapi version, platform, node version, the app's recent console output) and files it as a GitHub issue on [diffusionstudio/editor](https://github.com/diffusionstudio/editor/issues), printing the URL of the created issue.
+Reports a bug in `dapi` itself or in the app behind it: a command that errors, contradicts this reference, or returns something it shouldn't. Bundles the description with diagnostics (dapi version, platform, node version, the app's recent console output) and files it as a GitHub issue on [davidodunjo/editor](https://github.com/davidodunjo/editor/issues), printing the URL of the created issue.
 
 The issue is submitted immediately, in the background, with no review step: the command returns once the issue exists. Filing goes through the [`gh`](https://cli.github.com) CLI, which must be installed and authenticated (`gh auth login`); without it the command exits `1` and files nothing.
 
@@ -24,7 +24,7 @@ One JSON object:
 
 ```ts
 {
-  url: string  // the created github.com/diffusionstudio/editor issue
+  url: string  // the created github.com/davidodunjo/editor issue
 }
 ```
 

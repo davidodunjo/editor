@@ -2,7 +2,7 @@
 
 Checks a node's subtree for obvious structural mistakes, without rendering: spans of the node's play window where **no visual is scheduled** (likely black frames), children that never become visible, zero-duration or fully transparent nodes, and assets that failed to load or generate. Alongside the issues it reports subtree stats — node count by kind, nesting depth, and played duration — so it doubles as a quick structural summary of a scene.
 
-The analysis is structural, from the resolved timeline alone, so it is instant and costs no credits — and it can only say *nothing is scheduled*, not *the frame is black*. A scheduled clip can still render black (dark footage, content smaller than the canvas, a transparent asset); confirm suspicious spans visually with [`capture`](./capture.md) at a time inside the range.
+The analysis is structural, from the resolved timeline alone, so it is instant — and it can only say *nothing is scheduled*, not *the frame is black*. A scheduled clip can still render black (dark footage, content smaller than the canvas, a transparent asset); confirm suspicious spans visually with [`capture`](./capture.md) at a time inside the range.
 
 ## Input
 

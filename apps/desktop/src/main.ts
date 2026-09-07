@@ -11,7 +11,6 @@ import { updateElectronApp } from "update-electron-app";
 import { startCliServer, stopCliServer, isHeadless } from "./cli-server";
 import { installCli, isCliInstalled } from "./cli-install";
 import { healSkillsLinks, installSkills, isSkillsInstalled } from "./skills-install";
-import { trackInstall } from "./analytics";
 import { setupAppMenu } from "./menu";
 import { mainBridge } from "./main-manager";
 import { MAIN_CHANNELS } from "./main-channels";
@@ -41,11 +40,9 @@ import {
   writeManifest,
   writeProject,
 } from "./projects";
-import type { DeepLinkChannel } from "./main-channels";
 import type { LogEntry } from "@diffusionstudio/cli/protocol";
 
 const DEV_URL = "http://localhost:5173";
-const AUTH_PROTOCOL = "diffusion";
 const MACOS_CORNER_RADIUS = 18;
 const MACOS_BACKDROP = { blur: 80, red: 0.07, green: 0.07, blue: 0.07, alpha: 0.9 };
 
@@ -88,10 +85,6 @@ const openWrites = new Map<string, { handle: FileHandle; path: string }>();
 
 let mainWindow: BrowserWindow | null = null;
 
-// Deep links that arrived before the renderer could take them, keyed by the
-// channel they belong to so auth and checkout never drain each other's link.
-const pendingDeepLinks = new Map<DeepLinkChannel, string>();
-
 // Renderer console mirror, served to the CLI via LOGS_GET. Lives in main so
 // it survives reloads and captures everything the devtools console shows
 // (page logs, worker logs, uncaught errors) without touching the web bundle.
@@ -115,48 +108,8 @@ function captureConsole(window: BrowserWindow) {
   });
 }
 
-function findProtocolUrl(argv: string[]): string | null {
-  return argv.find((arg) => arg.startsWith(`${AUTH_PROTOCOL}://`)) ?? null;
-}
-
 function isHiddenLaunch(argv: string[]): boolean {
   return argv.includes("--hidden");
-}
-
-// diffusion://auth/callback → auth, diffusion://checkout/callback → checkout.
-function deepLinkChannel(url: string): DeepLinkChannel | null {
-  let host: string;
-  try {
-    host = new URL(url).hostname;
-  } catch {
-    return null;
-  }
-
-  if (host === "auth") return MAIN_CHANNELS.AUTH_CALLBACK;
-  if (host === "checkout") return MAIN_CHANNELS.CHECKOUT_CALLBACK;
-  return null;
-}
-
-function deliverDeepLink(url: string) {
-  const channel = deepLinkChannel(url);
-  if (!channel) return;
-
-  // A link that arrives before the page can receive it is parked rather than
-  // pushed: the renderer's subscription only exists once the component holding
-  // it mounts, which is well after did-finish-load. Parked links are handed
-  // over by the take* handlers below, which every consumer calls on mount.
-  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isLoading()) {
-    pendingDeepLinks.set(channel, url);
-    return;
-  }
-
-  mainBridge.emit(mainWindow, channel, { url });
-}
-
-function takePendingDeepLink(channel: DeepLinkChannel): string | null {
-  const url = pendingDeepLinks.get(channel) ?? null;
-  pendingDeepLinks.delete(channel);
-  return url;
 }
 
 async function setFileInputFiles(selector: string, absolutePath: string) {
@@ -238,19 +191,8 @@ function createWindow(show = true) {
   }
 }
 
-if (process.defaultApp && process.argv.length >= 2) {
-  app.setAsDefaultProtocolClient(AUTH_PROTOCOL, process.execPath, [
-    join(process.cwd(), process.argv[1]!),
-  ]);
-} else {
-  app.setAsDefaultProtocolClient(AUTH_PROTOCOL);
-}
-
 if (app.requestSingleInstanceLock()) {
   app.on("second-instance", (_event, argv) => {
-    const url = findProtocolUrl(argv);
-    if (url) deliverDeepLink(url);
-
     const hidden = isHiddenLaunch(argv);
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (hidden) return;
@@ -262,23 +204,12 @@ if (app.requestSingleInstanceLock()) {
     }
   });
 
-  app.on("open-url", (event, url) => {
-    event.preventDefault();
-    deliverDeepLink(url);
-  });
-
   mainBridge.handle(MAIN_CHANNELS.APP_OPEN_EXTERNAL, ({ url }) => shell.openExternal(url));
   mainBridge.handle(MAIN_CHANNELS.APP_SHOW_IN_FOLDER, ({ path }) => shell.showItemInFolder(path));
   mainBridge.handle(MAIN_CHANNELS.CLI_IS_INSTALLED, () => isCliInstalled());
   mainBridge.handle(MAIN_CHANNELS.CLI_INSTALL, () => installCli());
   mainBridge.handle(MAIN_CHANNELS.SKILLS_IS_INSTALLED, () => isSkillsInstalled());
   mainBridge.handle(MAIN_CHANNELS.SKILLS_INSTALL, () => installSkills());
-  mainBridge.handle(MAIN_CHANNELS.AUTH_GET_PENDING_CALLBACK, () =>
-    takePendingDeepLink(MAIN_CHANNELS.AUTH_CALLBACK),
-  );
-  mainBridge.handle(MAIN_CHANNELS.CHECKOUT_GET_PENDING_CALLBACK, () =>
-    takePendingDeepLink(MAIN_CHANNELS.CHECKOUT_CALLBACK),
-  );
   mainBridge.handle(MAIN_CHANNELS.WINDOW_IS_FULLSCREEN, () => mainWindow?.isFullScreen() ?? false);
   mainBridge.handle(MAIN_CHANNELS.WINDOW_CAPTURE, async () => {
     if (!mainWindow || mainWindow.isDestroyed()) throw new Error("No main window");
@@ -365,12 +296,8 @@ if (app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler(() => true);
     session.defaultSession.setDevicePermissionHandler(() => true);
 
-    const url = findProtocolUrl(process.argv);
-    if (url) deliverDeepLink(url);
-
     startCliServer();
     healSkillsLinks();
-    trackInstall();
     createWindow(!isHiddenLaunch(process.argv));
   });
 

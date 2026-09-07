@@ -86,7 +86,7 @@ Build, sign and install the package from the repo root. Run the same command to 
 npm run msix:install --workspace=@diffusionstudio/desktop
 ```
 
-The installed app registers the `diffusion://` protocol and a `diffusionstudio` command. Its onboarding installs `dapi` and the agent skills. The package, the staged files and the certificate are ignored by git.
+The installed app registers a `diffusionstudio` command. Its onboarding installs `dapi` and the agent skills. The package, the staged files and the certificate are ignored by git.
 
 Regenerate the tile images after changing the app icon:
 
@@ -104,7 +104,7 @@ npm run make --workspace=@diffusionstudio/desktop
 
 ## Status
 
-Windows support is complete: development, packaging and the CLI. Cloud features still call the upstream backend and need a Diffusion Studio account: generation, transcription, `dapi media listen`, upscaling and background removal. Replacing them with user-supplied API keys and local models is the next piece of work, along with removing sign-in and billing.
+Windows support is complete: development, packaging and the CLI. Sign-in, billing and telemetry are removed; the app runs offline with no account. Cloud features still call the upstream backend and fail without it: generation, transcription, `dapi media listen`, upscaling and background removal. Replacing them with user-supplied API keys and local models is the next piece of work.
 
 ## License
 

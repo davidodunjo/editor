@@ -20,7 +20,6 @@ import {
 } from "@/components/genai/config";
 import { assert, mimeTypeToExtension } from "@/utils";
 import { uploadBlob } from "@/lib/uploads";
-import { track } from "@/lib/analytics";
 import { trpc } from "@/lib/trpc";
 import { toast } from "somoto";
 
@@ -68,7 +67,7 @@ function steps(modifiers: SourceModifierValues): TransformKind[] {
  * A spec with defaults applied and every `AssetInput` reduced to an asset id.
  * Field order is fixed, so `JSON.stringify` of it is a stable `generationKey`.
  */
-type ResolvedSpec =
+export type ResolvedSpec =
   | { type: "image"; model: string; prompt: string; aspectRatio: AspectRatio; seed?: number; refIds: string[] }
   | { type: "video"; model: string; prompt: string; aspectRatio: AspectRatio; duration: number; audio: boolean; seed?: number; startFrameId?: string; endFrameId?: string }
   | { type: "voice"; model: string; prompt: string; voice: string; seed?: number }
@@ -289,36 +288,11 @@ export class EditorGenAi extends GenAi {
 
   /** Runs a generation and stores its first result under `generated/`. */
   private async runGeneration(spec: ResolvedSpec, generationKey: string): Promise<Asset> {
-    const startedAt = performance.now();
-    track("generation_started", {
-      mode: spec.type,
-      model: spec.model,
-      prompt_length: spec.prompt.length,
-      ...("aspectRatio" in spec ? { aspect_ratio: spec.aspectRatio } : {}),
-      ...(spec.type === "image" ? { reference_count: spec.refIds.length } : {}),
-    });
+    console.log(`[gen-ai] generating ${spec.type} with ${spec.model}:`, spec);
+    const { name, results, generationId } = await this.requestGeneration(spec);
+    assert(results.length > 0, "No results returned from the model");
 
-    try {
-      console.log(`[gen-ai] generating ${spec.type} with ${spec.model}:`, spec);
-      const { name, results, generationId } = await this.requestGeneration(spec);
-      assert(results.length > 0, "No results returned from the model");
-
-      const asset = await this.store(results[0].url, name, { key: generationKey, id: generationId });
-      track("generation_completed", {
-        mode: spec.type,
-        model: spec.model,
-        duration_ms: Math.round(performance.now() - startedAt),
-      });
-      return asset;
-    } catch (err) {
-      track("generation_failed", {
-        mode: spec.type,
-        model: spec.model,
-        duration_ms: Math.round(performance.now() - startedAt),
-        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
-      });
-      throw err;
-    }
+    return this.store(results[0].url, name, { key: generationKey, id: generationId });
   }
 
   /**
@@ -366,30 +340,12 @@ export class EditorGenAi extends GenAi {
 
   /** Uploads the input, runs the call, and stores the result beside the generations. */
   private async runTransform(kind: TransformKind, asset: Asset, key: string): Promise<Asset> {
-    const startedAt = performance.now();
-    track("generation_started", { mode: kind });
+    console.log(`[gen-ai] running ${kind} on ${asset.path}`);
+    const input = await this.uploadInput(asset.id);
+    const { url, generationId } = await this.requestTransform(kind, asset, input);
 
-    try {
-      console.log(`[gen-ai] running ${kind} on ${asset.path}`);
-      const input = await this.uploadInput(asset.id);
-      const { url, generationId } = await this.requestTransform(kind, asset, input);
-
-      const base = assetName(asset).replace(/\.[^.]+$/, "");
-      const stored = await this.store(url, `${base} (${TRANSFORMS[kind].suffix})`, { key, id: generationId });
-
-      track("generation_completed", {
-        mode: kind,
-        duration_ms: Math.round(performance.now() - startedAt),
-      });
-      return stored;
-    } catch (err) {
-      track("generation_failed", {
-        mode: kind,
-        duration_ms: Math.round(performance.now() - startedAt),
-        error: err instanceof Error ? err.message.slice(0, 200) : "unknown",
-      });
-      throw err;
-    }
+    const base = assetName(asset).replace(/\.[^.]+$/, "");
+    return this.store(url, `${base} (${TRANSFORMS[kind].suffix})`, { key, id: generationId });
   }
 
   private requestTransform(kind: TransformKind, asset: Asset, input: FileRef) {
@@ -487,6 +443,16 @@ export class EditorGenAi extends GenAi {
     const uploaded = await uploadBlob(await getAssetFile(asset), `${this.projectId}-${assetId}`);
     assert(uploaded, `Failed to upload referenced asset ${assetId}`);
     return uploaded;
+  }
+}
+
+export function generationSpecOf(asset: Asset): ResolvedSpec | undefined {
+  const key = asset.generation?.key;
+  if (!key?.startsWith("{")) return undefined;
+  try {
+    return JSON.parse(key) as ResolvedSpec;
+  } catch {
+    return undefined;
   }
 }
 

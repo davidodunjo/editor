@@ -493,7 +493,6 @@ const SCRIPTS: Record<string, string> = {
   models: "dapi models",
   voices: "dapi voices",
   fonts: "dapi fonts",
-  whoami: "dapi whoami",
   logs: "dapi logs",
   screenshot: "dapi screenshot",
   report: "dapi report",
@@ -654,7 +653,6 @@ All of them talk to the running app, except \`fonts\` and \`fetch\`.
 | \`models\` | \`dapi models [type]\` | Generation models and their per-model constraints. |
 | \`voices\` | \`dapi voices\` | Speech voices for \`generate.voice\`. |
 | \`fonts\` | \`dapi fonts\` | Local font families, valid as \`fontFamily\`. |
-| \`whoami\` | \`dapi whoami\` | The signed-in account. |
 | \`logs\` | \`dapi logs\` | Recent console output from the app. |
 | \`screenshot\` | \`dapi screenshot\` | The whole app window as a PNG. |
 | \`report\` | \`dapi report <title>\` | File a bug against the editor, with diagnostics attached. |
@@ -662,9 +660,9 @@ All of them talk to the running app, except \`fonts\` and \`fetch\`.
 
 ## Reference
 
-- [JSX reference](https://github.com/diffusionstudio/editor/blob/main/reference/jsx/README.md): elements, timing, paints, generation, captions
-- [CLI reference](https://github.com/diffusionstudio/editor/blob/main/reference/README.md): every command, its options and its output
-- [Examples](https://github.com/diffusionstudio/editor/tree/main/examples): runnable compositions to read
+- [JSX reference](https://github.com/davidodunjo/editor/blob/windows/reference/jsx/README.md): elements, timing, paints, generation, captions
+- [CLI reference](https://github.com/davidodunjo/editor/blob/windows/reference/README.md): every command, its options and its output
+- [Examples](https://github.com/davidodunjo/editor/tree/windows/examples): runnable compositions to read
 `;
 
 /**

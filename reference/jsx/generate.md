@@ -34,6 +34,8 @@ export default function Project() {
 
 Declarations are **pure**: calling `generate.*` validates its options and returns a ref; nothing is requested until an element carrying it mounts. A ref that is never used by a mounted element (directly or as an input to another asset) is never generated. Declarations may live at module scope or inside components.
 
+Generation currently runs through a configured cloud backend; without one every declaration fails with that reason. It is moving to user-supplied API keys and local models.
+
 Generation is **asynchronous and non-blocking**: the element is on the canvas immediately, showing a generating state, and its paint attaches when the asset lands. [`dapi context`](../context.md) reports where each one stands — generating, failed with the reason, or done with the library path it landed as — and a declaration that fails leaves its element carrying an [`error`](./errors.md#failed-sources).
 
 ## Declaration options
@@ -82,6 +84,6 @@ generate.audio(opts: {
 
 ## Caching and idempotency
 
-Generation is long-running and consumes credits, so results are **cached by content**: a key derived from the fully-resolved spec — `type`, `model`, `prompt`, the resolved ids of any references, `seed`, and the rest of the options, with the defaults filled in. Re-mounting an unchanged project reuses cached assets instead of regenerating, two declarations with identical specs collapse to a single asset, and identical concurrent declarations share one request; changing any option produces a new asset. Set `seed` to make a spec reproducible.
+Generation is long-running, so results are **cached by content**: a key derived from the fully-resolved spec — `type`, `model`, `prompt`, the resolved ids of any references, `seed`, and the rest of the options, with the defaults filled in. Re-mounting an unchanged project reuses cached assets instead of regenerating, two declarations with identical specs collapse to a single asset, and identical concurrent declarations share one request; changing any option produces a new asset. Set `seed` to make a spec reproducible.
 
 Finished generations are stored in the project's library under `generated/` with their spec key, so the cache survives app restarts — and a save that only touched an unrelated part of the file regenerates nothing. Deleting the asset from the library regenerates it on the next mount.
